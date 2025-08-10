@@ -1,6 +1,7 @@
 package com.capstone.huddle.users.service;
 
 import com.capstone.huddle.users.dto.request.UserRequest;
+import com.capstone.huddle.users.dto.response.UserResponse;
 import com.capstone.huddle.users.model.UserEntity;
 import com.capstone.huddle.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +23,9 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    public UserRequest signup(UserRequest userRequest) {
+    public UserResponse<UserEntity> signup(UserRequest userRequest) {
         log.info("Creating new user {}", userRequest.getUsername());
+
         UserEntity user = new UserEntity();
         user.setFirstName(userRequest.getFirstName());
         user.setLastName(userRequest.getLastName());
@@ -34,13 +36,10 @@ public class UserService {
 
         UserEntity savedEntity = userRepository.save(user);
 
-        return UserRequest.builder()
-                .firstName(savedEntity.getFirstName())
-                .lastName(savedEntity.getLastName())
-                .username(savedEntity.getUsername())
-                .email(savedEntity.getEmail())
-                .password(savedEntity.getPassword())
-                .createdAt(LocalDateTime.now())
+        return UserResponse.<UserEntity>builder()
+                .status("success")
+                .message("User created successfully")
+                .data(savedEntity)
                 .build();
     }
 

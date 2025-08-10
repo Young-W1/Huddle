@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-@EnableJpaRepositories(basePackages = "com.capstone.huddle.users.repository")
+@EnableJpaRepositories(basePackages = "com.capstone.huddle")
 @SpringBootApplication
 public class HuddleApplication {
 

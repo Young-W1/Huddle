@@ -25,7 +25,12 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/huddle/signup", "/huddle/login")
+                        .requestMatchers("/", "/huddle/signup", "/huddle/login",
+                                "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
+                        .permitAll()
+                        .requestMatchers("/huddle/articles/create", "/huddle/articles/allArticles",
+                                "/huddle/articles/article/{id}", "/huddle/articles/update/{id}",
+                                "/huddle/articles/delete/{id}")
                         .permitAll()
                         .anyRequest().authenticated()
                 )
