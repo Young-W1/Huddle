@@ -39,7 +39,7 @@ public class ArticleController {
         } catch (Exception e) {
             log.error("Error creating article: ", e);
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
-                    .status("400")
+                    .status(true)
                     .message("Failed to create article: " + e.getMessage())
                     .data(null)
                     .build();
@@ -60,7 +60,7 @@ public class ArticleController {
         } catch (Exception e) {
             log.error("Error retrieving articles: ", e);
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
-                    .status("500")
+                    .status(true)
                     .message("Failed to retrieve articles: " + e.getMessage())
                     .data(null)
                     .build();
@@ -82,7 +82,7 @@ public class ArticleController {
         } catch (Exception e) {
             log.error("Error retrieving article by ID: ", e);
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
-                    .status("404")
+                    .status(true)
                     .message("Article not found: " + e.getMessage())
                     .data(null)
                     .build();
@@ -105,7 +105,7 @@ public class ArticleController {
         } catch (Exception e) {
             log.error("Error updating article: ", e);
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
-                    .status("400")
+                    .status(true)
                     .message("Failed to update article: " + e.getMessage())
                     .data(null)
                     .build();
@@ -128,7 +128,7 @@ public class ArticleController {
         } catch (Exception e) {
             log.error("Error deleting article: ", e);
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
-                    .status("400")
+                    .status(true)
                     .message("Failed to delete article: " + e.getMessage())
                     .data(null)
                     .build();

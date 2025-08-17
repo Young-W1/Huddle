@@ -30,7 +30,8 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/huddle/articles/create", "/huddle/articles/allArticles",
                                 "/huddle/articles/article/{id}", "/huddle/articles/update/{id}",
-                                "/huddle/articles/delete/{id}")
+                                "/huddle/articles/delete/{id}", "/huddle/articles/{articleId}/comments",
+                                "/huddle/articles/{articleId}/comments/{commentId}", "/huddle/articles/{articleId}/comments/{commentId}")
                         .permitAll()
                         .anyRequest().authenticated()
                 )

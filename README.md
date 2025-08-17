@@ -14,6 +14,15 @@ read helpful topics.
 - Maven 3.6+
 - PostgreSQL (or your preferred database)
 
+## Technologies Used
+- Spring Boot 3.x
+- Spring Security
+- Spring Data JPA
+- PostgreSQL
+- JWT (JSON Web Tokens)
+- Swagger/OpenAPI for API documentation
+- Maven for dependency management
+
 ## Setup Instructions
 
 ### 1. Clone the Repository
@@ -34,6 +43,35 @@ mvn clean install
 mvn spring-boot:run
 ```
 The application will start on `http://localhost:6060` or else otherwise specified in the application.properties.
+
+### API Documentation
+#### Swagger UI
+Once the application is running, you can access the API documentation at:
+
+- Swagger UI: http://localhost:6060/swagger-ui.html
+- OpenAPI JSON: http://localhost:6060/v3/api-docs
+
+### API Endpoints
+
+#### Authentication
+- POST /huddle/signup - Register a new user
+- POST /huddle/login - User login
+
+#### Articles
+- GET /huddle/articles/allArticles - Get all articles
+- POST /huddle/articles/create - Create a new article
+- GET /huddle/articles/article/{id} - Get article by ID
+- PUT /huddle/articles/update/{id} - Update an article
+- DELETE /huddle/articles/delete/{id} - Delete an article
+
+#### Comments
+- POST /huddle/comments/create - Creates a new comment
+- GET /huddle/comments/article/{articleId} - Get comments for an article
+- PUT /huddle/comments/update/{id} - Updates a comment
+- DELETE /huddle/comments/delete/{id} - Deletes a comment
+
+### Security
+The application uses JWT (JSON Web Tokens) for authentication. Include the JWT token in the Authorization header as Bearer <token> for protected endpoints.
 
 
 

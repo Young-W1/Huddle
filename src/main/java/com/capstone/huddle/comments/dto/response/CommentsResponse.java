@@ -1,4 +1,4 @@
-package com.capstone.huddle.articles.dto.response;
+package com.capstone.huddle.comments.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ArticleResponse<T> {
+public class CommentsResponse<T> {
 
     private boolean status;
     private String message;

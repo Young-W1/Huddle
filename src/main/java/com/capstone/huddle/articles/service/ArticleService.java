@@ -46,7 +46,7 @@ public class ArticleService {
         log.info("Article created successfully with id: {}", savedArticle.getId());
 
         return ArticleResponse.<ArticleEntity>builder()
-                .status("success")
+                .status(true)
                 .message("Article created successfully")
                 .data(savedArticle)
                 .build();
@@ -62,7 +62,7 @@ public class ArticleService {
             log.info("Retrieved {} articles", articles.size());
 
             return ArticleResponse.<List<ArticleEntity>>builder()
-                    .status("success")
+                    .status(true)
                     .message("Articles retrieved successfully")
                     .data(articles)
                     .build();
@@ -79,7 +79,7 @@ public class ArticleService {
                 .orElseThrow(() -> new RuntimeException("Article not found with ID: " + id));
         log.info("Article retrieved successfully with ID: {}", article.getId());
         return ArticleResponse.<ArticleEntity>builder()
-                .status("success")
+                .status(true)
                 .message("Article retrieved successfully")
                 .data(article)
                 .build();
@@ -97,7 +97,7 @@ public class ArticleService {
         ArticleEntity updatedArticle = articleRepository.save(article);
         log.info("Article updated successfully with ID: {}", updatedArticle.getId());
         return ArticleResponse.<ArticleEntity>builder()
-                .status("success")
+                .status(true)
                 .message("Article updated successfully")
                 .data(updatedArticle)
                 .build();
@@ -112,7 +112,7 @@ public class ArticleService {
         articleRepository.delete(article);
         log.info("Article deleted successfully with ID: {}", id);
         return ArticleResponse.<Void>builder()
-                .status("success")
+                .status(true)
                 .message("Article deleted successfully")
                 .data(null)
                 .build();
