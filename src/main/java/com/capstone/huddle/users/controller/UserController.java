@@ -44,7 +44,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error creating user: ", e);
             UserResponse<Object> errorResponse = UserResponse.builder()
-                    .status("400")
+                    .success(false)
                     .message("Failed to create user: " + e.getMessage())
                     .data(null)
                     .build();

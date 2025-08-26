@@ -8,6 +8,7 @@ import javax.crypto.SecretKey;
 import io.jsonwebtoken.security.Keys;
 
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtUtil {

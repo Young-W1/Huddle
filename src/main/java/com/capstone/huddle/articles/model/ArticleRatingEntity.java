@@ -1,38 +1,41 @@
 package com.capstone.huddle.articles.model;
 
 import com.capstone.huddle.users.model.UserEntity;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
+
 @Entity
+@Table(name = "article_ratings",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"article_id", "user_id"}))
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-@Table(name = "articles")
-public class ArticleEntity {
+public class ArticleRatingEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private java.util.UUID id;
 
-    @Column(nullable = false)
-    private String title;
-
-    @Column(nullable = false)
-    private String content;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "article_id", nullable = false)
+    private ArticleEntity article;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private UserEntity author;
+    private UserEntity user;
+
+    @Column(nullable = false)
+    @Min(1)
+    @Max(5)
+    private Integer rating;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -45,13 +48,8 @@ public class ArticleEntity {
         createdAt = LocalDateTime.now();
     }
 
-    @Column
-    private Double averageRating = 0.0;
-
-    @Column
-    private Integer totalRatings = 0;
-
-    @OneToMany(mappedBy = "article", cascade = CascadeType.ALL)
-    private List<ArticleRatingEntity> ratings = new ArrayList<>();
-
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

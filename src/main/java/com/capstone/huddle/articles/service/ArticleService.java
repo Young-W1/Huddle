@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -46,7 +47,7 @@ public class ArticleService {
         log.info("Article created successfully with id: {}", savedArticle.getId());
 
         return ArticleResponse.<ArticleEntity>builder()
-                .status(true)
+                .success(true)
                 .message("Article created successfully")
                 .data(savedArticle)
                 .build();
@@ -62,7 +63,7 @@ public class ArticleService {
             log.info("Retrieved {} articles", articles.size());
 
             return ArticleResponse.<List<ArticleEntity>>builder()
-                    .status(true)
+                    .success(true)
                     .message("Articles retrieved successfully")
                     .data(articles)
                     .build();
@@ -73,20 +74,20 @@ public class ArticleService {
     }
 
     @Transactional(readOnly = true)
-    public ArticleResponse<ArticleEntity> getArticleById(Long id) {
+    public ArticleResponse<ArticleEntity> getArticleById(UUID id) {
         log.info("Retrieving article by ID: {}", id);
         ArticleEntity article = articleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Article not found with ID: " + id));
         log.info("Article retrieved successfully with ID: {}", article.getId());
         return ArticleResponse.<ArticleEntity>builder()
-                .status(true)
+                .success(true)
                 .message("Article retrieved successfully")
                 .data(article)
                 .build();
     }
 
     @Transactional
-    public ArticleResponse<ArticleEntity> updateArticle(Long id, ArticleRequest articleRequest) {
+    public ArticleResponse<ArticleEntity> updateArticle(UUID id, ArticleRequest articleRequest) {
         log.info("Updating article with ID: {}", id);
         ArticleEntity article = articleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Article not found with ID: " + id));
@@ -97,14 +98,14 @@ public class ArticleService {
         ArticleEntity updatedArticle = articleRepository.save(article);
         log.info("Article updated successfully with ID: {}", updatedArticle.getId());
         return ArticleResponse.<ArticleEntity>builder()
-                .status(true)
+                .success(true)
                 .message("Article updated successfully")
                 .data(updatedArticle)
                 .build();
     }
 
     @Transactional
-    public ArticleResponse<Void> deleteArticle(Long id) {
+    public ArticleResponse<Void> deleteArticle(UUID id) {
         log.info("Deleting article with ID: {}", id);
         ArticleEntity article = articleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Article not found with ID: " + id));
@@ -112,7 +113,7 @@ public class ArticleService {
         articleRepository.delete(article);
         log.info("Article deleted successfully with ID: {}", id);
         return ArticleResponse.<Void>builder()
-                .status(true)
+                .success(true)
                 .message("Article deleted successfully")
                 .data(null)
                 .build();

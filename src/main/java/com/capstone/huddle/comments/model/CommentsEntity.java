@@ -7,6 +7,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "comments")
@@ -20,8 +23,8 @@ public class CommentsEntity {
     //Fields: id, article (ManyToOne), author (ManyToOne to User), body, createdAt, updatedAt
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "article_id", nullable = false)
@@ -47,4 +50,14 @@ public class CommentsEntity {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    @Column
+    private Integer upvotes = 0;
+
+    @Column
+    private Integer downvotes = 0;
+
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL)
+    private List<CommentVoteEntity> votes = new ArrayList<>();
+
 }

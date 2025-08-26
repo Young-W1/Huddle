@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ArticleResponse<T> {
 
-    private boolean status;
+    private boolean success;
     private String message;
     private T data;
 }

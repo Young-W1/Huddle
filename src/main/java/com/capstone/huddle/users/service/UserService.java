@@ -37,7 +37,7 @@ public class UserService {
         UserEntity savedEntity = userRepository.save(user);
 
         return UserResponse.<UserEntity>builder()
-                .status("success")
+                .success(true)
                 .message("User created successfully")
                 .data(savedEntity)
                 .build();

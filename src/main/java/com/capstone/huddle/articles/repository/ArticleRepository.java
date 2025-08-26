@@ -9,14 +9,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface ArticleRepository extends JpaRepository<ArticleEntity, Long> {
+public interface ArticleRepository extends JpaRepository<ArticleEntity, UUID> {
 
-    Optional <ArticleEntity> findById(Long id);
+    Optional <ArticleEntity> findById(java.util.UUID id);
 
     // Find articles by author
     List<ArticleEntity> findByAuthor(UserEntity author);
@@ -35,7 +37,7 @@ public interface ArticleRepository extends JpaRepository<ArticleEntity, Long> {
     Page<ArticleEntity> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     // Find article by id and author (for authorization check)
-    Optional<ArticleEntity> findByIdAndAuthor(Long id, UserEntity author);
+    Optional<ArticleEntity> findByIdAndAuthor(UUID id, UserEntity author);
 
     // Search articles by title or content
     @Query("SELECT a FROM ArticleEntity a WHERE " +
@@ -44,5 +46,5 @@ public interface ArticleRepository extends JpaRepository<ArticleEntity, Long> {
     Page<ArticleEntity> searchArticles(@Param("searchTerm") String searchTerm, Pageable pageable);
 
     // Count articles by author
-    Long countByAuthor(UserEntity author);
+    UUID countByAuthor(UserEntity author);
 }

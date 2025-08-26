@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserResponse<T> {
 
-    private String status;
+    private boolean success;
     private String message;
     private T data;
 }

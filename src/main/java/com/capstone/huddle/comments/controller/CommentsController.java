@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @Slf4j
@@ -38,7 +39,7 @@ public class CommentsController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<?> createComment(
-            @PathVariable Long articleId,
+            @PathVariable UUID articleId,
             @RequestBody @Valid CommentsRequest commentsRequest,
             Principal principal) {
 
@@ -52,7 +53,7 @@ public class CommentsController {
             );
 
             CommentsResponse<CommentsEntity> response = CommentsResponse.<CommentsEntity>builder()
-                    .status(true)
+                    .success(true)
                     .message("Comment created successfully")
                     .data(comment)
                     .build();
@@ -61,7 +62,7 @@ public class CommentsController {
         } catch (EntityNotFoundException e) {
             log.error("Entity not found: ", e);
             CommentsResponse<Object> errorResponse = CommentsResponse.builder()
-                    .status(false)
+                    .success(false)
                     .message("Failed to create comment: " + e.getMessage())
                     .data(null)
                     .build();
@@ -69,7 +70,7 @@ public class CommentsController {
         } catch (Exception e) {
             log.error("Error creating comment: ", e);
             CommentsResponse<Object> errorResponse = CommentsResponse.builder()
-                    .status(false)
+                    .success(false)
                     .message("Failed to create comment: " + e.getMessage())
                     .data(null)
                     .build();
@@ -85,14 +86,14 @@ public class CommentsController {
             @ApiResponse(responseCode = "404", description = "Article not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<?> getCommentsByArticle(@PathVariable Long articleId) {
+    public ResponseEntity<?> getCommentsByArticle(@PathVariable UUID articleId) {
         log.info("Retrieving comments for article ID: {}", articleId);
 
         try {
             var response = commentsService.getCommentsByArticleId(articleId);
 
             CommentsResponse<List<CommentsEntity>> commentsResponse = CommentsResponse.<List<CommentsEntity>>builder()
-                    .status(true)
+                    .success(true)
                     .message(response.getMessage())
                     .data(response.getData())
                     .build();
@@ -101,7 +102,7 @@ public class CommentsController {
         } catch (EntityNotFoundException e) {
             log.error("Article not found with ID: {}", articleId);
             CommentsResponse<Object> errorResponse = CommentsResponse.builder()
-                    .status(false)
+                    .success(false)
                     .message("Article not found: " + e.getMessage())
                     .data(null)
                     .build();
@@ -109,7 +110,7 @@ public class CommentsController {
         } catch (Exception e) {
             log.error("Error retrieving comments for article {}: {}", articleId, e.getMessage());
             CommentsResponse<Object> errorResponse = CommentsResponse.builder()
-                    .status(false)
+                    .success(false)
                     .message("Failed to retrieve comments: " + e.getMessage())
                     .data(null)
                     .build();
@@ -126,8 +127,8 @@ public class CommentsController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<?> updateComment(
-            @PathVariable Long articleId,
-            @PathVariable Long commentId,
+            @PathVariable UUID articleId,
+            @PathVariable UUID commentId,
             @RequestBody @Valid CommentsRequest commentsRequest,
             Principal principal) {
 
@@ -143,7 +144,7 @@ public class CommentsController {
         } catch (EntityNotFoundException e) {
             log.error("Comment not found: {}", commentId);
             CommentsResponse<Object> errorResponse = CommentsResponse.builder()
-                    .status(false)
+                    .success(false)
                     .message("Comment not found: " + e.getMessage())
                     .data(null)
                     .build();
@@ -151,7 +152,7 @@ public class CommentsController {
         } catch (SecurityException e) {
             log.error("Unauthorized update attempt by user {}: {}", principal.getName(), e.getMessage());
             CommentsResponse<Object> errorResponse = CommentsResponse.builder()
-                    .status(false)
+                    .success(false)
                     .message("Forbidden: " + e.getMessage())
                     .data(null)
                     .build();
@@ -159,7 +160,7 @@ public class CommentsController {
         } catch (Exception e) {
             log.error("Error updating comment {}: {}", commentId, e.getMessage());
             CommentsResponse<Object> errorResponse = CommentsResponse.builder()
-                    .status(false)
+                    .success(false)
                     .message("Failed to update comment: " + e.getMessage())
                     .data(null)
                     .build();
@@ -177,8 +178,8 @@ public class CommentsController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<CommentsResponse<Void>> deleteComment(
-            @PathVariable Long articleId,
-            @PathVariable Long commentId,
+            @PathVariable UUID articleId,
+            @PathVariable UUID commentId,
             Principal principal) {
 
         log.info("User {} wants to delete comment {} on article {}", principal.getName(), commentId, articleId);
@@ -187,7 +188,7 @@ public class CommentsController {
             commentsService.deleteComment(commentId, principal.getName());
 
             CommentsResponse<Void> response = CommentsResponse.<Void>builder()
-                    .status(true)
+                    .success(true)
                     .message("Comment deleted successfully")
                     .data(null)
                     .build();

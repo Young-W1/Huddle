@@ -7,6 +7,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Builder
 @Entity
@@ -18,8 +19,8 @@ import java.util.Set;
 public class UserEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private java.util.UUID id;
 
     @Column
     private String firstName;

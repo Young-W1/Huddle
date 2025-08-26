@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
+
 
 @Slf4j
 @RestController
@@ -39,7 +41,7 @@ public class ArticleController {
         } catch (Exception e) {
             log.error("Error creating article: ", e);
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
-                    .status(true)
+                    .success(true)
                     .message("Failed to create article: " + e.getMessage())
                     .data(null)
                     .build();
@@ -60,7 +62,7 @@ public class ArticleController {
         } catch (Exception e) {
             log.error("Error retrieving articles: ", e);
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
-                    .status(true)
+                    .success(true)
                     .message("Failed to retrieve articles: " + e.getMessage())
                     .data(null)
                     .build();
@@ -75,14 +77,14 @@ public class ArticleController {
             @ApiResponse(responseCode = "404", description = "Article not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<?> getArticleById(@PathVariable Long id) {
+    public ResponseEntity<?> getArticleById(@PathVariable UUID id) {
         try {
             ArticleResponse<ArticleEntity> response = articleService.getArticleById(id);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error retrieving article by ID: ", e);
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
-                    .status(true)
+                    .success(true)
                     .message("Article not found: " + e.getMessage())
                     .data(null)
                     .build();
@@ -98,14 +100,14 @@ public class ArticleController {
             @ApiResponse(responseCode = "404", description = "Article not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<?> updateArticle(@PathVariable Long id, @Valid @RequestBody ArticleRequest article) {
+    public ResponseEntity<?> updateArticle(@PathVariable UUID id, @Valid @RequestBody ArticleRequest article) {
         try {
             ArticleResponse<ArticleEntity> response = articleService.updateArticle(id, article);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error updating article: ", e);
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
-                    .status(true)
+                    .success(true)
                     .message("Failed to update article: " + e.getMessage())
                     .data(null)
                     .build();
@@ -121,14 +123,14 @@ public class ArticleController {
             @ApiResponse(responseCode = "404", description = "Article not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<?> deleteArticle(@PathVariable Long id) {
+    public ResponseEntity<?> deleteArticle(@PathVariable UUID id) {
         try {
             ArticleResponse<Void> response = articleService.deleteArticle(id);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error deleting article: ", e);
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
-                    .status(true)
+                    .success(true)
                     .message("Failed to delete article: " + e.getMessage())
                     .data(null)
                     .build();

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +28,7 @@ public class CommentsService {
     private final UserRepository userRepository;
 
     // Add methods for creating, retrieving, updating, and deleting comments
-    public CommentsEntity addComment(Long articleId, String authorUsername, String body) {
+    public CommentsEntity addComment(UUID articleId, String authorUsername, String body) {
         ArticleEntity article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new EntityNotFoundException("Article not found"));
         UserEntity author = userRepository.findByUsername(authorUsername)
@@ -44,21 +45,19 @@ public class CommentsService {
 
     //get all comments for an article
     @Transactional(readOnly = true)
-    public ArticleResponse<List<CommentsEntity>> getCommentsByArticleId(Long articleId) {
+    public ArticleResponse<List<CommentsEntity>> getCommentsByArticleId(UUID articleId) {
         log.info("Retrieving comments for article ID: {}", articleId);
 
         try {
-            // Verify article exists
             ArticleEntity article = articleRepository.findById(articleId)
                     .orElseThrow(() -> new EntityNotFoundException("Article not found with ID: " + articleId));
 
-            // Get all comments for the article
             List<CommentsEntity> comments = commentsRepository.findByArticle(article);
 
             log.info("Retrieved {} comments for article ID: {}", comments.size(), articleId);
 
             return ArticleResponse.<List<CommentsEntity>>builder()
-                    .status(true)
+                    .success(true)
                     .message("Comments retrieved successfully")
                     .data(comments)
                     .build();
@@ -72,7 +71,7 @@ public class CommentsService {
     }
 
     @Transactional
-    public CommentsResponse<CommentsEntity> updateComment(Long commentId, String username, String newBody) {
+    public CommentsResponse<CommentsEntity> updateComment(UUID commentId, String username, String newBody) {
         log.info("Updating comment {} by user {}", commentId, username);
 
         try {
@@ -94,7 +93,7 @@ public class CommentsService {
             log.info("Successfully updated comment {}", commentId);
 
             return CommentsResponse.<CommentsEntity>builder()
-                    .status(true)
+                    .success(true)
                     .message("Comment updated successfully")
                     .data(updatedComment)
                     .build();
@@ -112,7 +111,7 @@ public class CommentsService {
 
     //delete comment
     @Transactional
-    public void deleteComment(Long commentId, String username) {
+    public void deleteComment(UUID commentId, String username) {
         log.info("Deleting comment {} by user {}", commentId, username);
         CommentsEntity comment = commentsRepository.findById(commentId)
                 .orElseThrow(() -> new EntityNotFoundException("Comment not found with ID: " + commentId));
