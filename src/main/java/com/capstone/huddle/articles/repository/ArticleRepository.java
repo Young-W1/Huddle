@@ -46,5 +46,5 @@ public interface ArticleRepository extends JpaRepository<ArticleEntity, UUID> {
     Page<ArticleEntity> searchArticles(@Param("searchTerm") String searchTerm, Pageable pageable);
 
     // Count articles by author
-    UUID countByAuthor(UserEntity author);
+    Long countByAuthor(UserEntity author);
 }

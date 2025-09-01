@@ -4,6 +4,7 @@ import com.capstone.huddle.utils.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -25,15 +26,56 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/huddle/signup", "/huddle/login",
-                                "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
+                        // Public authentication endpoints
+                        .requestMatchers("/", "/huddle/signup", "/huddle/login")
                         .permitAll()
-                        .requestMatchers("/huddle/articles/create", "/huddle/articles/allArticles",
-                                "/huddle/articles/article/{id}", "/huddle/articles/update/{id}",
-                                "/huddle/articles/delete/{id}", "/huddle/articles/{articleId}/comments",
-                                "/huddle/articles/{articleId}/comments/{commentId}", "/huddle/articles/{articleId}/comments/{commentId}",
-                                "/huddle/articles/{articleId}/comments/{commentId}/vote", "/huddle/articles/{articleId}/rate")
+
+                        // Swagger documentation endpoints
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
                         .permitAll()
+
+                        // Public article viewing endpoints
+                        .requestMatchers("GET", "/huddle/articles/allArticles",
+                                "/huddle/articles/article/{id}",
+                                "/huddle/articles/{articleId}/comments")
+                        .permitAll()
+
+                        // Public profile viewing endpoints
+                        .requestMatchers(HttpMethod.GET,
+                                "/huddle/users/{userId}/profile",
+                                "/huddle/users/{userId}/followers",
+                                "/huddle/users/{userId}/following")
+                        .permitAll()
+
+                        // Article management endpoints - require authentication
+                        .requestMatchers("POST", "/huddle/articles/create")
+                        .authenticated()
+                        .requestMatchers("PUT", "/huddle/articles/update/{id}")
+                        .authenticated()
+                        .requestMatchers("DELETE", "/huddle/articles/delete/{id}")
+                        .authenticated()
+
+                        // Comment management endpoints - require authentication
+                        .requestMatchers("POST", "/huddle/articles/{articleId}/comments")
+                        .authenticated()
+                        .requestMatchers("PUT", "/huddle/articles/{articleId}/comments/{commentId}")
+                        .authenticated()
+                        .requestMatchers("DELETE", "/huddle/articles/{articleId}/comments/{commentId}")
+                        .authenticated()
+
+                        // Voting and rating endpoints - require authentication
+                        .requestMatchers("/huddle/articles/{articleId}/comments/{commentId}/vote",
+                                "/huddle/articles/{articleId}/rate")
+                        .authenticated()
+
+                        // Profile management endpoints - require authentication
+                        .requestMatchers("PUT", "/huddle/users/profile")
+                        .authenticated()
+                        .requestMatchers("POST", "/huddle/users/{userId}/follow",
+                                "/huddle/users/{userId}/unfollow")
+                        .authenticated()
+
+                        // All other requests require authentication
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
