@@ -5,10 +5,11 @@ import com.capstone.huddle.users.model.UserEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,16 +17,20 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ArticleRepository extends JpaRepository<ArticleEntity, UUID> {
+public interface ArticleRepository extends JpaRepository<ArticleEntity, UUID>, JpaSpecificationExecutor<ArticleEntity> {
 
-    Optional <ArticleEntity> findById(java.util.UUID id);
+    Optional<ArticleEntity> findById(java.util.UUID id);
 
     // Find articles by author
     List<ArticleEntity> findByAuthor(UserEntity author);
 
-    // Find articles by author username
+    // Find articles by author username - returns a list (no pagination)
     @Query("SELECT a FROM ArticleEntity a WHERE a.author.username = :username")
     List<ArticleEntity> findByAuthorUsername(@Param("username") String username);
+
+    // Find articles by author username with pagination
+    @Query("SELECT a FROM ArticleEntity a WHERE a.author.username = :username")
+    Page<ArticleEntity> findByAuthorUsername(@Param("username") String username, Pageable pageable);
 
     // Find articles by title containing (case-insensitive)
     List<ArticleEntity> findByTitleContainingIgnoreCase(String title);
@@ -47,4 +52,8 @@ public interface ArticleRepository extends JpaRepository<ArticleEntity, UUID> {
 
     // Count articles by author
     Long countByAuthor(UserEntity author);
+
+    @Modifying
+    @Query(value = "UPDATE articles SET updated_at = created_at WHERE updated_at IS NULL", nativeQuery = true)
+    int updateNullUpdatedAtTimestamps();
 }

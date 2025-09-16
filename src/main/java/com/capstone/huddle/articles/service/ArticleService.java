@@ -1,14 +1,19 @@
 package com.capstone.huddle.articles.service;
 
+import com.capstone.huddle.articles.dto.ArticleFilterDto;
+import com.capstone.huddle.articles.dto.request.ArticleDataDto;
 import com.capstone.huddle.articles.dto.request.ArticleRequest;
-import com.capstone.huddle.articles.dto.response.ArticleResponse;
 import com.capstone.huddle.articles.model.ArticleEntity;
 import com.capstone.huddle.articles.repository.ArticleRepository;
+import com.capstone.huddle.common.specification.GenericSpecificationBuilder;
 import com.capstone.huddle.users.model.UserEntity;
 import com.capstone.huddle.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,98 +29,121 @@ public class ArticleService {
     private final UserRepository userRepository;
 
     @Transactional
-    public ArticleResponse<ArticleEntity> createArticle(ArticleRequest articleRequest) {
-        log.info("Creating new article {}", articleRequest.getTitle());
+    public ArticleDataDto createArticle(ArticleRequest articleRequest, String username) {
+        log.info("Creating new article '{}' for user: {}", articleRequest.getTitle(), username);
 
-        // Get the username from security context
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        // Find the user entity
         UserEntity author = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
-        // Create the article entity
         ArticleEntity article = ArticleEntity.builder()
                 .title(articleRequest.getTitle())
                 .content(articleRequest.getContent())
                 .author(author)
                 .build();
 
-        // Save the article
         ArticleEntity savedArticle = articleRepository.save(article);
+        log.info("Article created successfully with id: {} by user: {}", savedArticle.getId(), username);
 
-        log.info("Article created successfully with id: {}", savedArticle.getId());
-
-        return ArticleResponse.<ArticleEntity>builder()
-                .success(true)
-                .message("Article created successfully")
-                .data(savedArticle)
-                .build();
+        return mapToDataResponse(savedArticle);
     }
 
     @Transactional(readOnly = true)
-    public ArticleResponse<List<ArticleEntity>> getAllArticles() {
-        log.info("Retrieving all articles");
+    public Page<ArticleDataDto> getAllArticles(Pageable pageable) {
+        log.info("Retrieving all articles with pagination - page: {}, size: {}",
+                pageable.getPageNumber(), pageable.getPageSize());
 
-        try {
-            List<ArticleEntity> articles = articleRepository.findAll();
-
-            log.info("Retrieved {} articles", articles.size());
-
-            return ArticleResponse.<List<ArticleEntity>>builder()
-                    .success(true)
-                    .message("Articles retrieved successfully")
-                    .data(articles)
-                    .build();
-        } catch (Exception e) {
-            log.error("Error retrieving articles: ", e);
-            throw new RuntimeException("Failed to retrieve articles: " + e.getMessage());
-        }
+        Page<ArticleEntity> articlesPage = articleRepository.findAll(pageable);
+        return articlesPage.map(this::mapToDataResponse);
     }
 
     @Transactional(readOnly = true)
-    public ArticleResponse<ArticleEntity> getArticleById(UUID id) {
+    public ArticleDataDto getArticleById(UUID id) {
         log.info("Retrieving article by ID: {}", id);
         ArticleEntity article = articleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Article not found with ID: " + id));
-        log.info("Article retrieved successfully with ID: {}", article.getId());
-        return ArticleResponse.<ArticleEntity>builder()
-                .success(true)
-                .message("Article retrieved successfully")
-                .data(article)
-                .build();
+        return mapToDataResponse(article);
     }
 
     @Transactional
-    public ArticleResponse<ArticleEntity> updateArticle(UUID id, ArticleRequest articleRequest) {
-        log.info("Updating article with ID: {}", id);
+    public ArticleDataDto updateArticle(UUID id, ArticleRequest articleRequest, String username) {
+        log.info("Updating article with ID: {} by user: {}", id, username);
+
         ArticleEntity article = articleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Article not found with ID: " + id));
-        // Update article fields
+
+        if (!article.getAuthor().getUsername().equals(username)) {
+            throw new AccessDeniedException("You are not authorized to update this article");
+        }
+
         article.setTitle(articleRequest.getTitle());
         article.setContent(articleRequest.getContent());
-        // Save updated article
-        ArticleEntity updatedArticle = articleRepository.save(article);
-        log.info("Article updated successfully with ID: {}", updatedArticle.getId());
-        return ArticleResponse.<ArticleEntity>builder()
-                .success(true)
-                .message("Article updated successfully")
-                .data(updatedArticle)
-                .build();
+
+//        ArticleEntity updatedArticle = articleRepository.save(article);
+        ArticleEntity updatedArticle = articleRepository.saveAndFlush(article);
+        log.info("Article updated successfully with ID: {} by user: {}", updatedArticle.getId(), username);
+
+        return mapToDataResponse(updatedArticle);
     }
 
     @Transactional
-    public ArticleResponse<Void> deleteArticle(UUID id) {
-        log.info("Deleting article with ID: {}", id);
+    public void deleteArticle(UUID id, String username) {
+        log.info("Deleting article with ID: {} by user: {}", id, username);
+
         ArticleEntity article = articleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Article not found with ID: " + id));
-        // Delete the article
+
+        if (!article.getAuthor().getUsername().equals(username)) {
+            throw new AccessDeniedException("You are not authorized to delete this article");
+        }
+
         articleRepository.delete(article);
-        log.info("Article deleted successfully with ID: {}", id);
-        return ArticleResponse.<Void>builder()
-                .success(true)
-                .message("Article deleted successfully")
-                .data(null)
+        log.info("Article deleted successfully with ID: {} by user: {}", id, username);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ArticleDataDto> getArticlesByAuthor(String username, Pageable pageable) {
+        log.info("Retrieving articles by author: {}", username);
+        Page<ArticleEntity> articlesPage = articleRepository.findByAuthorUsername(username, pageable);
+        return articlesPage.map(this::mapToDataResponse);
+    }
+
+    private ArticleDataDto mapToDataResponse(ArticleEntity article) {
+        return ArticleDataDto.builder()
+                .id(article.getId())
+                .title(article.getTitle())
+                .content(article.getContent())
+                .authorUsername(article.getAuthorUsername())
+                .authorProfilePicture(article.getAuthorProfilePicture())
+                .createdAt(article.getCreatedAt())
+                .updatedAt(article.getUpdatedAt())
+                .averageRating(article.getAverageRating())
+                .totalRatings(article.getTotalRatings())
                 .build();
     }
+
+    public Page<ArticleDataDto> searchArticles(ArticleFilterDto filter, Pageable pageable) {
+        GenericSpecificationBuilder<ArticleEntity> builder = new GenericSpecificationBuilder<>();
+        Specification<ArticleEntity> spec = Specification.where(null);
+
+        if (filter.getSearchTerm() != null) {
+            spec = spec.and(builder.withTextSearch(
+                    filter.getSearchTerm(),
+                    "title", "content"
+            ));
+        }
+
+        if (filter.getAuthorUsername() != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("author").get("username"), filter.getAuthorUsername())
+            );
+        }
+
+        return articleRepository.findAll(spec, pageable).map(this::mapToDataResponse);
+    }
+
+    @Transactional
+    public int fixNullUpdatedAtTimestamps() {
+        return articleRepository.updateNullUpdatedAtTimestamps();
+    }
+
 }

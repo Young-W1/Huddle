@@ -56,19 +56,173 @@ Once the application is running, you can access the API documentation at:
 #### Authentication
 - POST /huddle/signup - Register a new user
 - POST /huddle/login - User login
+- POST /huddle/logout - User logout
 
 #### Articles
 - GET /huddle/articles/allArticles - Get all articles
+  - Query parameters: page, size, sort
 - POST /huddle/articles/create - Create a new article
 - GET /huddle/articles/article/{id} - Get article by ID
 - PUT /huddle/articles/update/{id} - Update an article
 - DELETE /huddle/articles/delete/{id} - Delete an article
 
+##### Search and Filter for Articles
+- GET /huddle/articles/search - Search and filter articles
+    - Query parameters:
+        - q (string): Search query for title/content
+        - author (string): Filter by author username
+        - tag (string): Filter by tag
+        - dateFrom (ISO-8601): Filter articles created after this date
+        - dateTo (ISO-8601): Filter articles created before this date
+        - page (int, default: 0): Page number
+        - size (int, default: 20): Items per page
+        - sort (string, e.g., createdAt,desc): Sort criteria
+
 #### Comments
 - POST /huddle/comments/create - Creates a new comment
 - GET /huddle/comments/article/{articleId} - Get comments for an article
+    - Query parameters: page, size, sort
 - PUT /huddle/comments/update/{id} - Updates a comment
 - DELETE /huddle/comments/delete/{id} - Deletes a comment
+
+#### Users/Profiles
+- GET /huddle/users/{userId}/followers - Get paginated list of user's followers
+    - Query parameters:
+        - `page`: Page number (default: 0)
+        - `size`: Items per page (default: 20)
+        - `sort`: Sort criteria (e.g., `follower.username,asc`)
+- GET /huddle/users/{userId}/following - Get paginated list of users being followed
+- POST /huddle/users/{userId}/follow - Follow a user
+- DELETE /huddle/users/{userId}/unfollow - Unfollow a user
+- GET /huddle/users/profile/{userId} - Get user profile information
+- PUT /huddle/users/profile/update - Update user profile
+
+### Pagination and Sorting
+For paginated endpoints (like followers/following), use these query parameters:
+- `page`: Page number starting from 0
+- `size`: Number of items per page
+- `sort`: Field and direction (e.g., `follower.username,asc` or `follower.joinedDate,desc`)
+
+**Important:** When sorting follow relationships, use dot notation to access nested properties:
+- `follower.username,asc` - Sort by follower's username
+- `follower.email,desc` - Sort by follower's email
+- `follower.joinedDate,desc` - Sort by when the follower joined
+
+## Notification Management
+
+### Get User Notifications
+- **URL:** `/huddle/notifications`
+- **Method:** `GET`
+- **Auth Required:** Yes
+- **Query Parameters:**
+    - `page` (int, optional): Page number (default: 0)
+    - `size` (int, optional): Page size (default: 20)
+    - `sort` (string, optional): Sort criteria (e.g., "createdAt,desc")
+- **Success Response:**
+    - **Code:** 200
+    - **Content:**
+      ```json
+      {
+        "success": true,
+        "message": "Notifications retrieved successfully",
+        "data": {
+          "content": [
+            {
+              "id": "uuid",
+              "userId": "uuid",
+              "actorId": "uuid",
+              "actorUsername": "john_doe",
+              "actorProfilePic": "url",
+              "message": "John Doe started following you",
+              "type": "FOLLOW",
+              "relatedEntityId": "uuid",
+              "isRead": false,
+              "createdAt": "2024-01-01T00:00:00Z"
+            }
+          ],
+          "pageable": {...},
+          "totalElements": 10
+        }
+      }
+      ```
+- **Error Response:**
+    - **Code:** 500
+    - **Content:**
+      ```json
+      {
+        "success": false,
+        "message": "Failed to retrieve notifications: error message",
+        "data": null
+      }
+      ```
+
+### Get Unread Notification Count
+- **URL:** `/huddle/notifications/unread-count`
+- **Method:** `GET`
+- **Auth Required:** Yes
+- **Success Response:**
+    - **Code:** 200
+    - **Content:**
+      ```json
+      {
+        "success": true,
+        "message": "Unread count retrieved successfully",
+        "data": 5
+      }
+      ```
+- **Error Response:**
+    - **Code:** 500
+    - **Content:**
+      ```json
+      {
+        "success": false,
+        "message": "Failed to retrieve unread count: error message",
+        "data": null
+      }
+      ```
+
+### Mark All Notifications as Read
+- **URL:** `/huddle/notifications/mark-all-read`
+- **Method:** `POST`
+- **Auth Required:** Yes
+- **Success Response:**
+    - **Code:** 200
+    - **Content:**
+      ```json
+      {
+        "success": true,
+        "message": "All notifications marked as read",
+        "data": null
+      }
+      ```
+- **Error Response:**
+    - **Code:** 500
+    - **Content:**
+      ```json
+      {
+        "success": false,
+        "message": "Failed to mark notifications as read: error message",
+        "data": null
+      }
+      ```
+
+### Notification Types
+- `FOLLOW` - When someone follows you
+- `NEW_COMMENT` - When someone comments on your article
+- `COMMENT_VOTE` - When someone upvotes/downvotes your comment
+
+### Search and Filter Guidelines
+#### Text Search
+Most search endpoints support a q or searchTerm parameter that searches across multiple fields:
+- Articles: Searches in title and content
+- Users: Searches in username, email, first name, and last name
+- Comments: Searches in comment body
+- Notifications: Searches in notification message
+
+#### Date Range Filtering
+Use ISO-8601 format for date filters:
+- dateFrom=2024-01-01T00:00:00Z
+- dateTo=2024-12-31T23:59:59Z
 
 ### Security
 The application uses JWT (JSON Web Tokens) for authentication. Include the JWT token in the Authorization header as Bearer <token> for protected endpoints.

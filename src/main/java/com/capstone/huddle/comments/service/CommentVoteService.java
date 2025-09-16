@@ -5,6 +5,7 @@ import com.capstone.huddle.comments.model.CommentVoteEntity;
 import com.capstone.huddle.comments.model.CommentsEntity;
 import com.capstone.huddle.comments.repository.CommentVoteRepository;
 import com.capstone.huddle.comments.repository.CommentsRepository;
+import com.capstone.huddle.notifications.service.NotificationService;
 import com.capstone.huddle.users.model.UserEntity;
 import com.capstone.huddle.users.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -22,6 +23,7 @@ public class CommentVoteService {
     private final CommentVoteRepository commentVoteRepository;
     private final CommentsRepository commentsRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public CommentVoteEntity voteComment(UUID commentId, String username, VoteType voteType) {
@@ -31,6 +33,8 @@ public class CommentVoteService {
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Optional<CommentVoteEntity> existingVote = commentVoteRepository.findByCommentAndUser(comment, user);
+        boolean isNewVote = false;
+        CommentVoteEntity resultVote = null;
 
         if (existingVote.isPresent()) {
             CommentVoteEntity vote = existingVote.get();
@@ -42,9 +46,8 @@ public class CommentVoteService {
             } else {
                 // Change vote type
                 vote.setVoteType(voteType);
-                vote = commentVoteRepository.save(vote);
-                updateCommentVoteCounts(comment);
-                return vote;
+                resultVote = commentVoteRepository.save(vote);
+                isNewVote = true; // Changed vote type, treat as new vote for notification
             }
         } else {
             // Create new vote
@@ -53,10 +56,23 @@ public class CommentVoteService {
                     .user(user)
                     .voteType(voteType)
                     .build();
-            vote = commentVoteRepository.save(vote);
-            updateCommentVoteCounts(comment);
-            return vote;
+            resultVote = commentVoteRepository.save(vote);
+            isNewVote = true;
         }
+
+        updateCommentVoteCounts(comment);
+
+        // Send notification only for new votes (not when removing) and not to self
+        if (isNewVote && !comment.getAuthor().getUsername().equals(username)) {
+            notificationService.createCommentVoteNotification(
+                    user,
+                    comment.getAuthor(),
+                    commentId,
+                    voteType == VoteType.UPVOTE
+            );
+        }
+
+        return resultVote;
     }
 
     private void updateCommentVoteCounts(CommentsEntity comment) {

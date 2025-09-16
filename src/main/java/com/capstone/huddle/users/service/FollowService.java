@@ -1,6 +1,7 @@
 package com.capstone.huddle.users.service;
 
 import com.capstone.huddle.articles.repository.ArticleRepository;
+import com.capstone.huddle.notifications.service.NotificationService;
 import com.capstone.huddle.users.dto.response.ProfileResponse;
 import com.capstone.huddle.users.dto.response.UserResponse;
 import com.capstone.huddle.users.model.FollowEntity;
@@ -25,6 +26,7 @@ public class FollowService {
     private final UserRepository userRepository;
     private final FollowRepository followRepository;
     private final ArticleRepository articleRepository;
+    private final NotificationService notificationService;
 
     public UserResponse<String> followUser(String followerUsername, UUID followingUserId) {
         UserEntity follower = userRepository.findByUsername(followerUsername)
@@ -47,6 +49,11 @@ public class FollowService {
                 .build();
 
         followRepository.save(follow);
+
+        // Create notification for the followed user
+        notificationService.createFollowNotification(follower, following);
+
+        log.info("User {} successfully followed user {}", followerUsername, following.getUsername());
 
         return new UserResponse<>(true, "Successfully followed user", following.getUsername());
     }

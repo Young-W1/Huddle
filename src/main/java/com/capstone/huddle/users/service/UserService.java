@@ -1,5 +1,8 @@
 package com.capstone.huddle.users.service;
 
+import com.capstone.huddle.common.specification.GenericSpecificationBuilder;
+import com.capstone.huddle.users.dto.UserDto;
+import com.capstone.huddle.users.dto.UserFilterDto;
 import com.capstone.huddle.users.dto.request.UserRequest;
 import com.capstone.huddle.users.dto.response.UserResponse;
 import com.capstone.huddle.users.model.UserEntity;
@@ -7,6 +10,9 @@ import com.capstone.huddle.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -51,5 +57,50 @@ public class UserService {
         return null;
     }
 
+    public Page<UserDto> searchUsers(UserFilterDto filter, Pageable pageable) {
+        GenericSpecificationBuilder<UserEntity> builder = new GenericSpecificationBuilder<>();
+
+        Specification<UserEntity> spec = Specification.where(null);
+
+        // Text search across multiple fields
+        if (filter.getSearchTerm() != null) {
+            spec = spec.and(builder.withTextSearch(
+                    filter.getSearchTerm(),
+                    "username", "email", "firstName", "lastName"
+            ));
+        }
+
+//        // Role filter
+//        if (filter.getRole() != null) {
+//            spec = spec.and(builder.withEquals(filter.getRole(), "role"));
+//        }
+//
+//        // Active status filter
+//        if (filter.getIsActive() != null) {
+//            spec = spec.and(builder.withBoolean(filter.getIsActive(), "isActive"));
+//        }
+//
+//        // Date range filter
+//        if (filter.getRegisteredAfter() != null && filter.getRegisteredBefore() != null) {
+//            spec = spec.and(builder.withDateRange(
+//                    filter.getRegisteredAfter(),
+//                    filter.getRegisteredBefore(),
+//                    "createdAt"
+//            ));
+//        }
+
+        return userRepository.findAll(spec, pageable).map(this::mapToDto);
+    }
+
+    private UserDto mapToDto(UserEntity user) {
+        return UserDto.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
 
 }

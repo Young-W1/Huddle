@@ -27,7 +27,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public authentication endpoints
-                        .requestMatchers("/", "/huddle/signup", "/huddle/login")
+                        .requestMatchers("/", "/huddle/signup", "/huddle/login", "/huddle/logout")
                         .permitAll()
 
                         // Swagger documentation endpoints
@@ -74,6 +74,21 @@ public class SecurityConfig {
                         .requestMatchers("POST", "/huddle/users/{userId}/follow",
                                 "/huddle/users/{userId}/unfollow")
                         .authenticated()
+
+
+                        // Notification endpoints - require authentication
+                        .requestMatchers("/huddle/notifications/**")
+                        .authenticated()
+
+                        // Search endpoints
+                        .requestMatchers(HttpMethod.GET, "/huddle/articles/search")
+                        .permitAll()  // Allow public article search
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/huddle/search/global",
+                                "/huddle/search-users",
+                                "/huddle/notifications/search")
+                        .authenticated()  // Require authentication for user/notification search and global search
 
                         // All other requests require authentication
                         .anyRequest().authenticated()
