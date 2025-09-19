@@ -17,6 +17,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -29,6 +33,7 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    // In UserService.java
     public UserResponse<UserEntity> signup(UserRequest userRequest) {
         log.info("Creating new user {}", userRequest.getUsername());
 
@@ -40,6 +45,12 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
         user.setCreatedAt(LocalDateTime.now());
 
+        // Set roles
+        if (userRequest.getRoles() == null || userRequest.getRoles().isEmpty()) {
+            user.setRoles(Set.of(UserEntity.Role.USER));        } else {
+            user.setRoles(userRequest.getRoles());
+        }
+
         UserEntity savedEntity = userRepository.save(user);
 
         return UserResponse.<UserEntity>builder()
@@ -48,6 +59,7 @@ public class UserService {
                 .data(savedEntity)
                 .build();
     }
+
 
     public UserEntity login(String username, String password) {
         UserEntity user = userRepository.findByUsername(username).orElse(null);
@@ -69,27 +81,26 @@ public class UserService {
                     "username", "email", "firstName", "lastName"
             ));
         }
-
-//        // Role filter
-//        if (filter.getRole() != null) {
-//            spec = spec.and(builder.withEquals(filter.getRole(), "role"));
-//        }
-//
-//        // Active status filter
-//        if (filter.getIsActive() != null) {
-//            spec = spec.and(builder.withBoolean(filter.getIsActive(), "isActive"));
-//        }
-//
-//        // Date range filter
-//        if (filter.getRegisteredAfter() != null && filter.getRegisteredBefore() != null) {
-//            spec = spec.and(builder.withDateRange(
-//                    filter.getRegisteredAfter(),
-//                    filter.getRegisteredBefore(),
-//                    "createdAt"
-//            ));
-//        }
-
         return userRepository.findAll(spec, pageable).map(this::mapToDto);
+    }
+
+    private Set<UserEntity.Role> convertStringToRoles(Set<String> roleStrings) {
+        if (roleStrings == null) {
+            return Set.of(UserEntity.Role.USER);
+        }
+
+        return roleStrings.stream()
+                .map(String::toUpperCase)
+                .map(UserEntity.Role::valueOf)
+                .collect(Collectors.toSet());
+    }
+
+    public Optional<UserEntity> findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+
+    public Optional<UserEntity> findById(UUID id) {
+        return userRepository.findById(id);
     }
 
     private UserDto mapToDto(UserEntity user) {

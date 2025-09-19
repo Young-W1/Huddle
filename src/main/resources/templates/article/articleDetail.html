@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Article</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <article id="articleContent">
+                    <!-- Article content will be loaded here -->
+                </article>
+
+                <!-- Comments Section -->
+                <section class="mt-5">
+                    <h3>Comments</h3>
+                    <div id="commentForm" class="mb-4" sec:authorize="isAuthenticated()">
+                        <form id="addCommentForm">
+                            <div class="mb-3">
+                                <textarea class="form-control" id="commentContent" rows="3"
+                                          placeholder="Write your comment..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Post Comment</button>
+                        </form>
+                    </div>
+                    <div id="commentsList">
+                        <!-- Comments will be loaded here -->
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script th:inline="javascript">
+        const articleId = [[${articleId}]];
+        let currentArticle = null;
+
+        function loadArticle() {
+            $.get(`/huddle/articles/article/${articleId}`, function(response) {
+                // Handle wrapped response
+                currentArticle = response.data || response;
+
+                const articleHtml = `
+                    <h1>${currentArticle.title}</h1>
+                    <div class="text-muted mb-4">
+                        <small>
+                            <i class="bi bi-person"></i> ${currentArticle.authorName || currentArticle.authorUsername || 'Anonymous'}
+                            <i class="bi bi-calendar ms-3"></i> ${new Date(currentArticle.createdAt).toLocaleDateString()}
+                            <i class="bi bi-eye ms-3"></i> ${currentArticle.views || 0} views
+                            <i class="bi bi-star ms-3"></i> ${(currentArticle.averageRating || 0).toFixed(1)}
+                        </small>
+                    </div>
+                    <div class="article-content">
+                        ${currentArticle.content}
+                    </div>
+                `;
+                $('#articleContent').html(articleHtml);
+
+                loadComments();
+            }).fail(function() {
+                $('#articleContent').html('<div class="alert alert-danger">Failed to load article.</div>');
+            });
+        }
+
+        function loadComments() {
+            // Implementation for loading comments
+            $('#commentsList').html('<p class="text-muted">No comments yet.</p>');
+        }
+
+        $('#addCommentForm').on('submit', function(e) {
+            e.preventDefault();
+            const content = $('#commentContent').val();
+
+            // Add comment implementation
+            alert('Comment feature coming soon!');
+            $('#commentContent').val('');
+        });
+
+        $(document).ready(function() {
+            loadArticle();
+        });
+    </script>
+</div>
+</body>
+</html>

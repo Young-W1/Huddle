@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Notifications</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1>Notifications</h1>
+                    <button class="btn btn-sm btn-outline-primary" onclick="markAllAsRead()">
+                        Mark all as read
+                    </button>
+                </div>
+
+                <div id="notificationsList">
+                    <!-- Notifications will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script th:inline="javascript">
+        function loadNotifications() {
+            $.ajax({
+                url: '/huddle/notifications',
+                type: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
+                success: function(notifications) {
+                    const container = $('#notificationsList');
+                    container.empty();
+
+                    if (notifications.length > 0) {
+                        notifications.forEach(notification => {
+                            const notificationHtml = `
+                                <div class="card mb-3 ${notification.read ? '' : 'border-primary'}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <h6 class="mb-1">${notification.title}</h6>
+                                                <p class="mb-1">${notification.message}</p>
+                                                <small class="text-muted">
+                                                    ${new Date(notification.createdAt).toLocaleString()}
+                                                </small>
+                                            </div>
+                                            ${!notification.read ? `
+                                                <button class="btn btn-sm btn-outline-primary"
+                                                        onclick="markAsRead(${notification.id})">
+                                                    Mark as read
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            container.append(notificationHtml);
+                        });
+                    } else {
+                        container.html('<p class="text-center text-muted">No notifications</p>');
+                    }
+                }
+            });
+        }
+
+        function markAsRead(notificationId) {
+            $.ajax({
+                url: `/huddle/notifications/${notificationId}/read`,
+                type: 'PUT',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
+                success: function() {
+                    loadNotifications();
+                }
+            });
+        }
+
+        function markAllAsRead() {
+            $.ajax({
+                url: '/huddle/notifications/mark-all-read',
+                type: 'PUT',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
+                success: function() {
+                    loadNotifications();
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            loadNotifications();
+        });
+    </script>
+</div>
+</body>
+</html>

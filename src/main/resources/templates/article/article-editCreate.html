@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title th:text="${isEdit} ? 'Edit Article' : 'Create Article'">Article</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-body p-5">
+                        <h2 class="mb-4" th:text="${isEdit} ? 'Edit Article' : 'Create New Article'">Article</h2>
+
+                        <form id="articleForm">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Title</label>
+                                <input type="text" class="form-control" id="title" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Category</label>
+                                <select class="form-control" id="category" required>
+                                    <option value="">Select a category</option>
+                                    <option value="Technology">Technology</option>
+                                    <option value="Science">Science</option>
+                                    <option value="Business">Business</option>
+                                    <option value="Health">Health</option>
+                                    <option value="Travel">Travel</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="content" class="form-label">Content</label>
+                                <textarea class="form-control" id="content" rows="10" required></textarea>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <span th:text="${isEdit} ? 'Update Article' : 'Publish Article'">Submit</span>
+                                </button>
+                                <a href="/articles" class="btn btn-secondary">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script th:inline="javascript">
+        const isEdit = [[${isEdit}]] || false;
+        const articleId = [[${articleId}]] || null;
+
+        if (isEdit && articleId) {
+            // Load article data for editing
+            $.get(`/huddle/articles/article/${articleId}`, function(response) {
+                const article = response.data || response;
+                $('#title').val(article.title);
+                $('#category').val(article.category);
+                $('#content').val(article.content);
+            });
+        }
+
+        $('#articleForm').on('submit', function(e) {
+            e.preventDefault();
+
+            const articleData = {
+                title: $('#title').val(),
+                category: $('#category').val(),
+                content: $('#content').val()
+            };
+
+            const url = isEdit
+                ? `/huddle/articles/update/${articleId}`
+                : '/huddle/articles/create';
+
+            const method = isEdit ? 'PUT' : 'POST';
+
+            $.ajax({
+                url: url,
+                type: method,
+                contentType: 'application/json',
+                data: JSON.stringify(articleData),
+                success: function(response) {
+                    alert(isEdit ? 'Article updated successfully!' : 'Article created successfully!');
+                    window.location.href = '/articles';
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        window.location.href = '/login';
+                    } else {
+                        alert('Failed to save article. Please try again.');
+                    }
+                }
+            });
+        });
+    </script>
+</div>
+</body>
+</html>

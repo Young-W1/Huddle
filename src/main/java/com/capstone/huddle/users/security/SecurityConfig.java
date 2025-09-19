@@ -5,8 +5,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Autowired
@@ -23,79 +28,93 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(AbstractHttpConfigurer::disable)  // Simplified CSRF disable
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .maximumSessions(1)
+                        .maxSessionsPreventsLogin(false)
+                )
                 .authorizeHttpRequests(auth -> auth
-                        // Public authentication endpoints
-                        .requestMatchers("/", "/huddle/signup", "/huddle/login", "/huddle/logout")
+                        // IMPORTANT: Order matters - most specific first
+
+                        // Protected article operations - MUST come before general /articles/**
+                        .requestMatchers("/articles/create").authenticated()
+                        .requestMatchers("/articles/edit/**").authenticated()
+                        .requestMatchers("/my-articles").authenticated()
+
+                        // Protected user pages
+                        .requestMatchers("/profile", "/notifications").authenticated()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        // Protected API endpoints
+                        .requestMatchers(HttpMethod.POST, "/huddle/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/huddle/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/huddle/**").authenticated()
+                        .requestMatchers("/huddle/articles/my-articles").authenticated()
+                        .requestMatchers("/huddle/articles/my-articles-session").authenticated()
+
+                        // Public pages - AFTER protected patterns
+                        .requestMatchers("/", "/index", "/home").permitAll()
+                        .requestMatchers("/login", "/signup", "/logout").permitAll()
+                        .requestMatchers("/articles", "/articles/{id:[a-f0-9\\-]+}").permitAll()  // UUID pattern
+
+                        // Public API endpoints
+                        .requestMatchers(HttpMethod.GET, "/huddle/articles/allArticles").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/huddle/articles/article/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/huddle/articles/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/huddle/users/**").permitAll()
+
+                        // Static resources
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/static/**", "/webjars/**").permitAll()
+                        .requestMatchers("/error", "/error/**", "/favicon.ico").permitAll()
+
+                        // Swagger
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
+
+                        // Everything else is public
+                        .anyRequest().permitAll()
+                )
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .loginProcessingUrl("/login")
+                        .usernameParameter("username")
+                        .passwordParameter("password")
+                        .defaultSuccessUrl("/", true)
+                        .failureUrl("/login?error=true")
                         .permitAll()
-
-                        // Swagger documentation endpoints
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/?logout=true")
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                        .deleteCookies("JSESSIONID")
                         .permitAll()
-
-                        // Public article viewing endpoints
-                        .requestMatchers("GET", "/huddle/articles/allArticles",
-                                "/huddle/articles/article/{id}",
-                                "/huddle/articles/{articleId}/comments")
-                        .permitAll()
-
-                        // Public profile viewing endpoints
-                        .requestMatchers(HttpMethod.GET,
-                                "/huddle/users/{userId}/profile",
-                                "/huddle/users/{userId}/followers",
-                                "/huddle/users/{userId}/following")
-                        .permitAll()
-
-                        // Article management endpoints - require authentication
-                        .requestMatchers("POST", "/huddle/articles/create")
-                        .authenticated()
-                        .requestMatchers("PUT", "/huddle/articles/update/{id}")
-                        .authenticated()
-                        .requestMatchers("DELETE", "/huddle/articles/delete/{id}")
-                        .authenticated()
-
-                        // Comment management endpoints - require authentication
-                        .requestMatchers("POST", "/huddle/articles/{articleId}/comments")
-                        .authenticated()
-                        .requestMatchers("PUT", "/huddle/articles/{articleId}/comments/{commentId}")
-                        .authenticated()
-                        .requestMatchers("DELETE", "/huddle/articles/{articleId}/comments/{commentId}")
-                        .authenticated()
-
-                        // Voting and rating endpoints - require authentication
-                        .requestMatchers("/huddle/articles/{articleId}/comments/{commentId}/vote",
-                                "/huddle/articles/{articleId}/rate")
-                        .authenticated()
-
-                        // Profile management endpoints - require authentication
-                        .requestMatchers("PUT", "/huddle/users/profile")
-                        .authenticated()
-                        .requestMatchers("POST", "/huddle/users/{userId}/follow",
-                                "/huddle/users/{userId}/unfollow")
-                        .authenticated()
-
-
-                        // Notification endpoints - require authentication
-                        .requestMatchers("/huddle/notifications/**")
-                        .authenticated()
-
-                        // Search endpoints
-                        .requestMatchers(HttpMethod.GET, "/huddle/articles/search")
-                        .permitAll()  // Allow public article search
-
-                        .requestMatchers(HttpMethod.GET,
-                                "/huddle/search/global",
-                                "/huddle/search-users",
-                                "/huddle/notifications/search")
-                        .authenticated()  // Require authentication for user/notification search and global search
-
-                        // All other requests require authentication
-                        .anyRequest().authenticated()
+                )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            String requestUri = request.getRequestURI();
+                            // Only redirect to login for protected pages
+                            if (requestUri.startsWith("/my-articles") ||
+                                    requestUri.startsWith("/profile") ||
+                                    requestUri.startsWith("/notifications") ||
+                                    requestUri.startsWith("/articles/create") ||
+                                    requestUri.startsWith("/articles/edit")) {
+                                response.sendRedirect("/login");
+                            } else {
+                                // For public pages, don't redirect
+                                response.setStatus(200);
+                            }
+                        })
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
     @Bean

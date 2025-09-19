@@ -4,7 +4,11 @@ import com.capstone.huddle.articles.dto.ArticleFilterDto;
 import com.capstone.huddle.articles.dto.request.ArticleDataDto;
 import com.capstone.huddle.articles.dto.request.ArticleRequest;
 import com.capstone.huddle.articles.dto.response.ArticleResponse;
+import com.capstone.huddle.articles.model.ArticleEntity;
+import com.capstone.huddle.articles.repository.ArticleRepository;
 import com.capstone.huddle.articles.service.ArticleService;
+import com.capstone.huddle.users.model.UserEntity;
+import com.capstone.huddle.users.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -13,12 +17,16 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
 import java.util.UUID;
 
 @Slf4j
@@ -29,6 +37,12 @@ public class ArticleController {
 
     @Autowired
     private ArticleService articleService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private ArticleRepository articleRepository;
 
     @PostMapping("/create")
     @Operation(summary = "Create article", description = "Create a new article in the database")
@@ -66,6 +80,8 @@ public class ArticleController {
     @Operation(summary = "Get all articles", description = "Retrieve all articles from the database with pagination")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved articles"),
+            @ApiResponse(responseCode = "400", description = "Bad request, invalid pagination parameters"),
+            @ApiResponse(responseCode = "404", description = "Book not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<?> getAllArticles(Pageable pageable) {
@@ -248,4 +264,69 @@ public class ArticleController {
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
+
+    @GetMapping("/my-articles-session")
+    @Operation(summary = "Get my articles using session", description = "Get all articles created by the session-authenticated user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved articles"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<?> getMyArticlesWithSession(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        try {
+            if (userDetails == null) {
+                ArticleResponse<Object> errorResponse = ArticleResponse.builder()
+                        .success(false)
+                        .message("User not authenticated")
+                        .data(null)
+                        .build();
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+            }
+
+            // Get user by username from session
+            UserEntity user = userService.findByUsername(userDetails.getUsername())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Page<ArticleEntity> articles = articleRepository.findByAuthorId(user.getId(), pageable);
+
+            Page<ArticleDataDto> articleDTOs = articles.map(article -> ArticleDataDto.builder()
+                    .id(article.getId())
+                    .title(article.getTitle())
+                    .content(article.getContent())
+                    .category(article.getCategory())
+                    .views(article.getViews())
+                    .authorId(article.getAuthorId())
+                    .authorUsername(article.getAuthorUsername())
+                    .authorName(article.getAuthorName())
+                    .authorProfilePicture(article.getAuthorProfilePicture())
+                    .createdAt(article.getCreatedAt())
+                    .updatedAt(article.getUpdatedAt())
+                    .averageRating(article.getAverageRating())
+                    .totalRatings(article.getTotalRatings())
+                    .commentCount(article.getCommentCount())
+                    .build());
+
+            ArticleResponse<Page<ArticleDataDto>> response = ArticleResponse.<Page<ArticleDataDto>>builder()
+                    .success(true)
+                    .message("User articles retrieved successfully")
+                    .data(articleDTOs)
+                    .build();
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error retrieving user articles with session: ", e);
+            ArticleResponse<Object> errorResponse = ArticleResponse.builder()
+                    .success(false)
+                    .message("Failed to retrieve articles: " + e.getMessage())
+                    .data(null)
+                    .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
 }
