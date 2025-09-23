@@ -1,5 +1,5 @@
-// In UserRequest.java
 package com.capstone.huddle.users.dto.request;
+
 
 import com.capstone.huddle.users.model.UserEntity;
 import lombok.AllArgsConstructor;
@@ -8,14 +8,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Set;
 import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserRequest {
+
     private String firstName;
     private String lastName;
     private String username;
@@ -24,4 +25,8 @@ public class UserRequest {
     private Set<UserEntity.Role> roles = new HashSet<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+
+    public UserRequest(String user, String test, String testuser, String mail, String password) {
+    }
 }

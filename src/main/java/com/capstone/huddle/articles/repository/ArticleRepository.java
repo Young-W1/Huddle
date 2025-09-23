@@ -44,11 +44,11 @@ public interface ArticleRepository extends JpaRepository<ArticleEntity, UUID>, J
     // Find article by id and author (for authorization check)
     Optional<ArticleEntity> findByIdAndAuthor(UUID id, UserEntity author);
 
-//    // Search articles by title or content
-//    @Query("SELECT a FROM ArticleEntity a WHERE " +
-//            "LOWER(a.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-//            "LOWER(a.content) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
-//    Page<ArticleEntity> searchArticles(@Param("searchTerm") String searchTerm, Pageable pageable);
+    // Search articles by title or content
+    @Query("SELECT a FROM ArticleEntity a WHERE " +
+            "LOWER(a.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(a.content) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
+    Page<ArticleEntity> searchArticles(@Param("searchTerm") String searchTerm, Pageable pageable);
 
     // Count articles by author
     Long countByAuthor(UserEntity author);
@@ -56,21 +56,4 @@ public interface ArticleRepository extends JpaRepository<ArticleEntity, UUID>, J
     @Modifying
     @Query(value = "UPDATE articles SET updated_at = created_at WHERE updated_at IS NULL", nativeQuery = true)
     int updateNullUpdatedAtTimestamps();
-
-    Optional<ArticleEntity> findByIdAndAuthor_Username(UUID id, String username);
-
-    Page<ArticleEntity> findByAuthor_Username(String username, Pageable pageable);
-
-    // Add this method for finding by author ID
-    @Query("SELECT a FROM ArticleEntity a WHERE a.author.id = :authorId")
-    Page<ArticleEntity> findByAuthorId(@Param("authorId") UUID authorId, Pageable pageable);
-
-    @Query("SELECT a FROM ArticleEntity a WHERE " +
-            "LOWER(a.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(a.content) LIKE LOWER(CONCAT('%', :query, '%'))")
-    Page<ArticleEntity> searchArticles(@Param("query") String query, Pageable pageable);
-
-    @Query("SELECT a FROM ArticleEntity a WHERE a.category = :category")
-    Page<ArticleEntity> findByCategory(@Param("category") String category, Pageable pageable);
-
 }

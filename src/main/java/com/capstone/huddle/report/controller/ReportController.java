@@ -2,178 +2,178 @@ package com.capstone.huddle.report.controller;
 
 import com.capstone.huddle.report.dto.request.CreateReportDto;
 import com.capstone.huddle.report.dto.request.UpdateReportDto;
-import com.capstone.huddle.report.dto.response.ReportDto;
 import com.capstone.huddle.report.dto.response.ReportResponse;
-import com.capstone.huddle.report.entity.ReportEntity;
+import com.capstone.huddle.report.dto.response.ReportResponseDto;
 import com.capstone.huddle.report.entity.ReportStatus;
-import com.capstone.huddle.report.mapper.ReportMapper;
 import com.capstone.huddle.report.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import lombok.RequiredArgsConstructor;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/huddle/reports")
-@RequiredArgsConstructor
-@Slf4j
-@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Reports", description = "Report management APIs")
 public class ReportController {
 
-    private final ReportService reportService;
-    private final ReportMapper reportMapper;
+    @Autowired
+    private ReportService reportService;
 
-    @PostMapping("/create-report")
-    @Operation(summary = "Create Report", description = "Endpoint for users to create a report against an article or user.")
+    @PostMapping("/create")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Create report", description = "Create a new report for an article")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Report created successfully"),
+            @ApiResponse(responseCode = "201", description = "Successfully created report"),
             @ApiResponse(responseCode = "400", description = "Bad request, invalid input"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized, authentication required"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "Article not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<ReportResponse<ReportDto>> createReport(
-            @Valid @RequestBody CreateReportDto dto,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        log.info("Creating report for user: {}", userDetails.getUsername());
+    public ResponseEntity<?> createReport(@Valid @RequestBody CreateReportDto dto,
+                                          Authentication authentication) {
         try {
-            ReportEntity report = reportService.createReport(dto, userDetails.getUsername());
-            ReportDto reportDto = reportMapper.toDto(report);
+            String username = authentication.getName();
+            ReportResponseDto createdReport = reportService.createReport(dto, username);
 
-            ReportResponse<ReportDto> response = ReportResponse.<ReportDto>builder()
+            ReportResponse<ReportResponseDto> response = ReportResponse.<ReportResponseDto>builder()
                     .success(true)
                     .message("Report created successfully")
-                    .data(reportDto)
+                    .data(createdReport)
                     .build();
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (RuntimeException e) {
-            log.error("Invalid input for report creation: {}", e.getMessage());
-            ReportResponse<ReportDto> response = ReportResponse.<ReportDto>builder()
+
+            return ResponseEntity.status(201).body(response);
+        } catch (EntityNotFoundException e) {
+            log.error("Entity not found: ", e);
+            ReportResponse<Object> errorResponse = ReportResponse.builder()
                     .success(false)
                     .message(e.getMessage())
                     .data(null)
                     .build();
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            return ResponseEntity.status(404).body(errorResponse);
+        } catch (IllegalStateException e) {
+            log.error("Invalid state: ", e);
+            ReportResponse<Object> errorResponse = ReportResponse.builder()
+                    .success(false)
+                    .message(e.getMessage())
+                    .data(null)
+                    .build();
+            return ResponseEntity.badRequest().body(errorResponse);
         } catch (Exception e) {
-            log.error("Failed to create report", e);
-            ReportResponse<ReportDto> response = ReportResponse.<ReportDto>builder()
+            log.error("Error creating report: ", e);
+            ReportResponse<Object> errorResponse = ReportResponse.builder()
                     .success(false)
                     .message("Failed to create report: " + e.getMessage())
                     .data(null)
                     .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ResponseEntity.status(500).body(errorResponse);
         }
     }
 
-    @GetMapping("/all-reports")
-    @Operation(summary = "Get All Reports", description = "Admin endpoint to retrieve all reports with optional status filtering and pagination.")
+    @GetMapping("/all")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @Operation(summary = "Get all reports", description = "Retrieve all reports with optional status filter and pagination")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Reports retrieved successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized, admin access required"),
-            @ApiResponse(responseCode = "403", description = "Forbidden, admin role required"),
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved reports"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - admin access required"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ReportResponse<Page<ReportDto>>> getAllReports(
-            @RequestParam(required = false) ReportStatus status,
-            Pageable pageable) {
-        log.info("Fetching all reports with status: {} and pageable: {}", status, pageable);
+    public ResponseEntity<?> getAllReports(@RequestParam(required = false) ReportStatus status,
+                                           Pageable pageable) {
         try {
-            Page<ReportEntity> reportEntities = reportService.getAllReports(status, pageable);
+            Page<ReportResponseDto> reports = reportService.getAllReports(status, pageable);
 
-            // Convert entities to DTOs
-            List<ReportDto> reportDtos = reportEntities.getContent().stream()
-                    .map(reportMapper::toDto)
-                    .collect(Collectors.toList());
-
-            Page<ReportDto> reportDtoPage = new PageImpl<>(
-                    reportDtos,
-                    pageable,
-                    reportEntities.getTotalElements()
-            );
-
-            ReportResponse<Page<ReportDto>> response = ReportResponse.<Page<ReportDto>>builder()
+            ReportResponse<Page<ReportResponseDto>> response = ReportResponse.<Page<ReportResponseDto>>builder()
                     .success(true)
                     .message("Reports retrieved successfully")
-                    .data(reportDtoPage)
+                    .data(reports)
                     .build();
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Failed to retrieve reports", e);
-            ReportResponse<Page<ReportDto>> response = ReportResponse.<Page<ReportDto>>builder()
+            log.error("Error retrieving reports: ", e);
+            ReportResponse<Object> errorResponse = ReportResponse.builder()
                     .success(false)
                     .message("Failed to retrieve reports: " + e.getMessage())
                     .data(null)
                     .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ResponseEntity.status(500).body(errorResponse);
         }
     }
 
-    @PutMapping("/{reportId}")
-    @Operation(summary = "Update Report Status", description = "Admin endpoint to update the status of a specific report.")
+    @PutMapping("/update/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @Operation(summary = "Update report", description = "Update report status and add admin notes")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Report status updated successfully"),
+            @ApiResponse(responseCode = "200", description = "Successfully updated report"),
             @ApiResponse(responseCode = "400", description = "Bad request, invalid input"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized, admin access required"),
-            @ApiResponse(responseCode = "403", description = "Forbidden, admin role required"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - admin access required"),
             @ApiResponse(responseCode = "404", description = "Report not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ReportResponse<ReportDto>> updateReport(
-            @PathVariable UUID reportId,
-            @Valid @RequestBody UpdateReportDto dto,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        log.info("Updating report {} by admin: {}", reportId, userDetails.getUsername());
+    public ResponseEntity<?> updateReport(@PathVariable UUID id,
+                                          @Valid @RequestBody UpdateReportDto dto,
+                                          Authentication authentication) {
         try {
-            ReportEntity report = reportService.updateReportStatus(reportId, dto, userDetails.getUsername());
-            ReportDto reportDto = reportMapper.toDto(report);
+            String adminUsername = authentication.getName();
+            ReportResponseDto updatedReport = reportService.updateReportStatus(id, dto, adminUsername);
 
-            ReportResponse<ReportDto> response = ReportResponse.<ReportDto>builder()
+            ReportResponse<ReportResponseDto> response = ReportResponse.<ReportResponseDto>builder()
                     .success(true)
-                    .message("Report status updated successfully")
-                    .data(reportDto)
+                    .message("Report updated successfully")
+                    .data(updatedReport)
                     .build();
+
             return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            log.error("Report not found with id: {}", reportId);
-            ReportResponse<ReportDto> response = ReportResponse.<ReportDto>builder()
+        } catch (EntityNotFoundException e) {
+            log.error("Report not found: ", e);
+            ReportResponse<Object> errorResponse = ReportResponse.builder()
                     .success(false)
                     .message(e.getMessage())
                     .data(null)
                     .build();
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            return ResponseEntity.status(404).body(errorResponse);
         } catch (Exception e) {
-            log.error("Failed to update report", e);
-            ReportResponse<ReportDto> response = ReportResponse.<ReportDto>builder()
+            log.error("Error updating report: ", e);
+            ReportResponse<Object> errorResponse = ReportResponse.builder()
                     .success(false)
                     .message("Failed to update report: " + e.getMessage())
                     .data(null)
                     .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 
-    @GetMapping("/test")
-    @Operation(summary = "Test endpoint", description = "Simple test to verify controller is working")
-    @ApiResponse(responseCode = "200", description = "Controller is working")
-    public ResponseEntity<String> test() {
-        log.info("Test endpoint called");
-        return ResponseEntity.ok("Report controller is working");
+    @GetMapping("/debug/auth")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> debugAuth(Authentication authentication) {
+        var authorities = authentication.getAuthorities().stream()
+                .map(auth -> auth.getAuthority())
+                .collect(Collectors.toList());
+
+        log.info("Current user: {}, Authorities: {}", authentication.getName(), authorities);
+
+        return ResponseEntity.ok(Map.of(
+                "username", authentication.getName(),
+                "authorities", authorities,
+                "principal", authentication.getPrincipal()
+        ));
     }
+
 }

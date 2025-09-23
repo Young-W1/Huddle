@@ -35,13 +35,6 @@ public class ArticleEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Column(length = 100)
-    private String category;
-
-    @Column(nullable = false)
-    @Builder.Default
-    private Integer views = 0;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore
@@ -51,16 +44,13 @@ public class ArticleEntity {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
     @Column
     private LocalDateTime updatedAt;
 
     @Column
-    @Builder.Default
     private Double averageRating = 0.0;
 
     @Column
-    @Builder.Default
     private Integer totalRatings = 0;
 
     @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -101,28 +91,16 @@ public class ArticleEntity {
         return comments != null ? comments.size() : 0;
     }
 
-    // Helper method to increment views
-    public void incrementViews() {
-        this.views = (this.views != null ? this.views : 0) + 1;
-    }
-
-    // Helper method to update rating
-    public void updateRating(Double newRating) {
-        if (totalRatings == null) {
-            totalRatings = 0;
-            averageRating = 0.0;
-        }
-
-        double totalScore = averageRating * totalRatings;
-        totalScore += newRating;
-        totalRatings++;
-        averageRating = totalScore / totalRatings;
-    }
-
     @PrePersist
     protected void onCreate() {
-        if (views == null) views = 0;
-        if (averageRating == null) averageRating = 0.0;
-        if (totalRatings == null) totalRatings = 0;
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();  // Add this line
+
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+        System.out.println("PreUpdate called - setting updatedAt to: " + updatedAt);
     }
 }

@@ -20,12 +20,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import java.util.Set;
 
 @Slf4j
 @RestController
@@ -179,22 +177,5 @@ public class UserController {
                 .message("Logged out successfully")
                 .build());
     }
-
-    @PostMapping("/create-admin")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Create Admin User", description = "Create a new admin user account (Admin only)")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Admin user created successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request, invalid input"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized, user not authenticated"),
-            @ApiResponse(responseCode = "403", description = "Forbidden, user not authorized"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    public ResponseEntity<?> createAdmin(@RequestBody UserRequest userRequest) {
-        userRequest.setRoles(Set.of(UserEntity.Role.ADMIN, UserEntity.Role.USER));
-        UserResponse<UserEntity> response = userService.signup(userRequest);
-        return ResponseEntity.ok(response);
-    }
-
 
 }
