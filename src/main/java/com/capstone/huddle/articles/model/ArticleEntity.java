@@ -35,6 +35,9 @@ public class ArticleEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
+    @Column(length = 100)
+    private String category;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore

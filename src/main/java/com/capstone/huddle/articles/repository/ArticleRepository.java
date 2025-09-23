@@ -56,4 +56,17 @@ public interface ArticleRepository extends JpaRepository<ArticleEntity, UUID>, J
     @Modifying
     @Query(value = "UPDATE articles SET updated_at = created_at WHERE updated_at IS NULL", nativeQuery = true)
     int updateNullUpdatedAtTimestamps();
+
+    @Query("SELECT COUNT(a) FROM ArticleEntity a")
+    long countTotalArticles();
+
+    @Query("SELECT COUNT(a) FROM ArticleEntity a WHERE a.createdAt >= :date")
+    long countArticlesCreatedAfter(@Param("date") LocalDateTime date);
+
+    @Query("SELECT a.category, COUNT(a) FROM ArticleEntity a GROUP BY a.category")
+    List<Object[]> countArticlesByCategory();
+
+    @Query("SELECT a.author.username, COUNT(a) as postCount FROM ArticleEntity a GROUP BY a.author.username ORDER BY postCount DESC")
+    List<Object[]> getTopContributors(Pageable pageable);
+
 }

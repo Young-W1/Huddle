@@ -7,8 +7,10 @@ import com.capstone.huddle.users.model.UserEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -20,5 +22,9 @@ public interface ReportRepository extends JpaRepository<ReportEntity, UUID> {
 
     boolean existsByReporterAndReportedArticle(UserEntity reporter, ArticleEntity article);
 
+    @Query("SELECT r.status, COUNT(r) FROM ReportEntity r GROUP BY r.status")
+    List<Object[]> countReportsByStatus();
+
+    long countByStatus(ReportStatus status);
 
 }

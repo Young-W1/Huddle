@@ -66,4 +66,8 @@ public class UserEntity {
         MODERATOR
     }
 
+    @Column
+    private LocalDateTime lastLogin;
+
+
 }

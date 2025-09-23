@@ -59,13 +59,30 @@ public class UserService {
     }
 
 
+//    public UserEntity login(String username, String password) {
+//        UserEntity user = userRepository.findByUsername(username).orElse(null);
+//        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+//            return user;
+//        }
+//        return null;
+//    }
     public UserEntity login(String username, String password) {
         UserEntity user = userRepository.findByUsername(username).orElse(null);
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
-            return user;
+            // Update last login time
+            user.setLastLogin(LocalDateTime.now());
+            user.setUpdatedAt(LocalDateTime.now());
+
+            // Save the updated user entity
+            UserEntity updatedUser = userRepository.save(user);
+
+            log.info("User {} logged in successfully at {}", username, user.getLastLogin());
+            return updatedUser;
         }
+        log.warn("Failed login attempt for username: {}", username);
         return null;
     }
+
 
     public Page<UserDto> searchUsers(UserFilterDto filter, Pageable pageable) {
         GenericSpecificationBuilder<UserEntity> builder = new GenericSpecificationBuilder<>();

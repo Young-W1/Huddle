@@ -227,7 +227,81 @@ Use ISO-8601 format for date filters:
 ### Security
 The application uses JWT (JSON Web Tokens) for authentication. Include the JWT token in the Authorization header as Bearer <token> for protected endpoints.
 
+### Reports Management
+#### Create Report
+ - URL: /huddle/reports/create
+Method: POST
+Auth Required: Yes
+Request Body:
 
+#### Get All Reports (Admin Only)
+- URL: /huddle/reports/all
+- Method: GET
+- Auth Required: Yes (Admin authority required)
+- Query Parameters:
+- status (optional): 
+- Filter by report status (PENDING, UNDER_REVIEW, RESOLVED, DISMISSED)
+- page (int, optional): Page number (default: 0)
+- size (int, optional): Page size (default: 20)
+- sort (string, optional): Sort criteria (e.g., "createdAt,desc"
 
+#### Update Report Status (Admin Only)
+- URL: /huddle/reports/update/{id}
+- Method: PUT
+- Auth Required: Yes (Admin authority required)
+- Path Parameters: id: Report UUID
 
+#### Report Status Values
+- PENDING - Report awaiting review
+- UNDER_REVIEW - Report being investigated
+- RESOLVED - Report has been addressed
+- DISMISSED - Report dismissed as invalid
 
+#### Report Reason Values
+Common reasons for reporting:
+- INAPPROPRIATE_CONTENT
+- SPAM
+- HARASSMENT
+- MISINFORMATION
+- COPYRIGHT_VIOLATION
+- OTHER
+
+### Analytics (Admin Only)
+#### Get All Analytics
+- URL: /huddle/analytics/all
+- Method: GET
+- Auth Required: Yes (Admin authority required)
+- Description: Get comprehensive analytics including user, post, and report statistics
+
+#### Get User Statistics
+- URL: /huddle/analytics/users
+- Method: GET
+- Auth Required: Yes (Admin authority required)
+- Description: Get user-related statistics
+
+#### Get Post Statistics
+- URL: /huddle/analytics/posts
+- Method: GET
+- Auth Required: Yes (Admin authority required)
+- Description: Get post/article-related statistics
+
+#### Get Report Statistics
+- URL: /huddle/analytics/reports
+- Method: GET
+- Auth Required: Yes (Admin authority required)
+- Description: Get report-related statistics
+
+### Admin Access
+The following endpoints require admin privileges (users with ADMIN authority):
+
+#### Reports Management:
+- GET /huddle/reports/all - View all reports
+- PUT /huddle/reports/update/{id} - Update report status
+
+#### Analytics Dashboard:
+- GET /huddle/analytics/all - Comprehensive analytics
+- GET /huddle/analytics/users - User statistics
+- GET /huddle/analytics/posts - Post statistics
+- GET /huddle/analytics/reports - Report statistics
+
+Note: Admin users are identified by having the ADMIN authority in their security context.

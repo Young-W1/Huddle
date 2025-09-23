@@ -6,7 +6,9 @@ public enum ReportStatus {
     PENDING("Pending"),
     REVIEWED("Reviewed"),
     RESOLVED("Resolved"),
-    REJECTED("Rejected");
+    REJECTED("Rejected"),
+    DISMISSED("Dismissed"),
+    UNDER_REVIEW("Under Review");
 
     private final String displayName;
 
