@@ -23,4 +23,6 @@ public class ArticleDataDto {
     private LocalDateTime updatedAt;
     private Double averageRating;
     private Integer totalRatings;
+    private UUID authorId;
+
 }

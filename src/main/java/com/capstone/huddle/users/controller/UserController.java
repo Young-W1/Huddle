@@ -1,11 +1,16 @@
 package com.capstone.huddle.users.controller;
 
+import com.capstone.huddle.articles.dto.request.ArticleDataDto;
+import com.capstone.huddle.articles.service.ArticleService;
 import com.capstone.huddle.users.dto.UserDto;
 import com.capstone.huddle.users.dto.UserFilterDto;
 import com.capstone.huddle.users.dto.request.LoginRequest;
 import com.capstone.huddle.users.dto.request.UserRequest;
+import com.capstone.huddle.users.dto.response.ProfileResponse;
 import com.capstone.huddle.users.dto.response.UserResponse;
 import com.capstone.huddle.users.model.UserEntity;
+import com.capstone.huddle.users.repository.UserRepository;
+import com.capstone.huddle.users.service.ProfileService;
 import com.capstone.huddle.users.service.UserService;
 import com.capstone.huddle.utils.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,8 +23,10 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,6 +42,13 @@ public class UserController {
     private UserService userService;
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private ProfileService profileService;
+    @Autowired
+    private ArticleService articleService;
+
 
     @PostMapping("/signup")
     @Operation(summary = "User Signup", description = "Create a new user account")
@@ -134,20 +148,36 @@ public class UserController {
     }
 
 
-    @GetMapping("/profile")
-    @Operation(summary = "Get User Profile", description = "Retrieve user profile information")
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get current User Profile", description = "Retrieve user profile information")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized, user not authenticated"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<?> getUserProfile(Authentication authentication) {
-        String username = authentication.getName();
-        return ResponseEntity.ok(Map.of(
-                "username", username,
-                "message", "Profile retrieved successfully"
-        ));
+    public ResponseEntity<UserResponse<ProfileResponse>> getUserProfile(Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            UserEntity user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            ProfileResponse profile = profileService.getUserProfile(user.getId(), username);
+
+            // Get articles count
+            Page<ArticleDataDto> userArticles = articleService.getArticlesByAuthor(username,
+                    PageRequest.of(0, 1));
+            profile.setArticlesCount(userArticles.getTotalElements());
+
+            return ResponseEntity.ok(new UserResponse<>(true, "Profile retrieved successfully", profile));
+        } catch (Exception e) {
+            log.error("Error retrieving user profile: ", e);
+            return ResponseEntity.status(500).body(
+                    new UserResponse<>(false, "Failed to retrieve profile: " + e.getMessage(), null)
+            );
+        }
     }
+
 
     @GetMapping("/search-users")
     @Operation(summary = "Search Users", description = "Search and filter users with pagination")

@@ -71,7 +71,6 @@ public class UserService {
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
             // Update last login time
             user.setLastLogin(LocalDateTime.now());
-            user.setUpdatedAt(LocalDateTime.now());
 
             // Save the updated user entity
             UserEntity updatedUser = userRepository.save(user);

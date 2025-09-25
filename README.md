@@ -10,11 +10,18 @@ read helpful topics.
 
 ## Prerequisites
 
+### Backend
 - Java 17 or higher
 - Maven 3.6+
 - PostgreSQL (or your preferred database)
 
+### Frontend
+- Node.js 16+ 
+- npm or yarn package manager
+
 ## Technologies Used
+
+### Backend
 - Spring Boot 3.x
 - Spring Security
 - Spring Data JPA
@@ -23,7 +30,16 @@ read helpful topics.
 - Swagger/OpenAPI for API documentation
 - Maven for dependency management
 
+### Frontend
+- React 18
+- Material-UI (MUI) 5
+- React Router DOM
+- Axios for API calls
+- React Hooks for state management
+
 ## Setup Instructions
+
+### Backend Setup
 
 ### 1. Clone the Repository
 ```bash
@@ -42,7 +58,130 @@ mvn clean install
 ```bash
 mvn spring-boot:run
 ```
-The application will start on `http://localhost:6060` or else otherwise specified in the application.properties.
+The backend application will start on `http://localhost:8080` or as specified in application.properties.
+
+### Frontend Setup
+
+### 1. Navigate to Frontend Directory
+```bash
+cd frontend
+```
+
+### 2. Install Dependencies
+```bash
+npm install
+# or
+yarn install
+```
+
+### 3. Configure Environment (Optional)
+Create a `.env` file in the frontend directory:
+```env
+REACT_APP_API_URL=http://localhost:8080
+```
+
+### 4. Start the Development Server
+```bash
+npm start
+# or
+yarn start
+```
+The frontend application will start on `http://localhost:3000`.
+
+## Frontend Features
+
+### User Interface
+- **Modern Design**: Clean, responsive Material-UI components
+- **Dark/Light Theme**: Consistent theming throughout the application
+- **Mobile Responsive**: Optimized for all device sizes
+- **Smooth Animations**: Fade-in effects and hover transitions
+
+### Authentication
+- **Login/Signup**: Secure authentication with JWT tokens
+- **Protected Routes**: Route-based access control
+- **Auto-logout**: Automatic logout on token expiration
+
+### Dashboard & Home
+- **Welcome Screen**: Beautiful gradient hero section
+- **Feature Highlights**: Interactive cards showcasing platform capabilities
+- **Quick Actions**: Easy navigation to key features
+- **Statistics Display**: User engagement metrics
+
+### Articles Management
+- **Article Hub**: Comprehensive article browsing with search and filters
+- **Grid/List Views**: Toggle between card and list layouts
+- **Article Creation**: Rich text editor for content creation
+- **Rating System**: 5-star rating system for articles
+- **Tagging**: Article categorization with tag support
+- **Sort Options**: Sort by newest, oldest, or most popular
+
+### Article Interactions
+- **Detailed View**: Full article reading experience
+- **Comments System**: Nested comments with voting
+- **Comment Voting**: Upvote/downvote functionality
+- **Share Functionality**: Social sharing capabilities
+- **Report System**: Content moderation through user reports
+
+### User Profiles
+- **Profile Pages**: Comprehensive user profile display
+- **Avatar Support**: Profile picture functionality
+- **Follow System**: User following/followers management
+- **Activity Tabs**: Articles, followers, and following sections
+- **Profile Editing**: Update bio, location, website, and other details
+
+### Reports & Moderation
+- **Report Articles**: Flag inappropriate content
+- **Report Categories**: Multiple report reason options
+- **Admin Dashboard**: Administrative interface for report management
+- **Status Tracking**: Report status updates (Pending, Resolved, Dismissed)
+
+### Navigation & Layout
+- **Sidebar Navigation**: Collapsible side navigation
+- **Header Bar**: User info and quick actions
+- **Breadcrumbs**: Clear navigation paths
+- **Search Integration**: Global search functionality
+
+### Responsive Design
+- **Mobile First**: Optimized for mobile devices
+- **Tablet Support**: Perfect tablet experience
+- **Desktop Enhanced**: Rich desktop features
+- **Touch Friendly**: Touch-optimized interactions
+
+### Performance Features
+- **Lazy Loading**: Optimized content loading
+- **Error Boundaries**: Graceful error handling
+- **Loading States**: Skeleton loaders and spinners
+- **Caching**: Efficient data caching strategies
+
+## Application Structure
+
+### Frontend Directory Structure
+```
+frontend/
+├── public/
+│   ├── index.html
+│   └── ...
+├── src/
+│   ├── components/
+│   │   ├── Layout.js          # Main layout wrapper
+│   │   └── SearchBar.js       # Global search component
+│   ├── pages/
+│   │   ├── Dashboard.js       # Home/landing page
+│   │   ├── Articles.js        # Articles hub with grid/list views
+│   │   ├── ArticleDetail.js   # Individual article view
+│   │   ├── Profile.js         # User profile pages
+│   │   ├── Login.js          # Authentication login
+│   │   ├── Signup.js         # User registration
+│   │   ├── Reports.js        # Admin reports management
+│   │   └── ...
+│   ├── services/
+│   │   └── api.js            # API service layer
+│   ├── utils/
+│   │   └── axiosConfig.js    # HTTP client configuration
+│   ├── App.js                # Main application component
+│   └── index.js              # Application entry point
+└── package.json
+```
 
 ### API Documentation
 #### Swagger UI

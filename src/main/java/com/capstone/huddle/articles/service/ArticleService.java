@@ -118,6 +118,7 @@ public class ArticleService {
                 .updatedAt(article.getUpdatedAt())
                 .averageRating(article.getAverageRating())
                 .totalRatings(article.getTotalRatings())
+                .authorId(article.getAuthor().getId())
                 .build();
     }
 
