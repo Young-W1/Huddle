@@ -16,4 +16,7 @@ public class CommentResponseDto {
     private LocalDateTime updatedAt;
     private UUID articleId;
     private String articleTitle;
+    private UUID parentCommentId;
+    private Integer upvotes;
+    private Integer downvotes;
 }

@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -15,4 +17,6 @@ public class CommentsRequest {
 
     @NotBlank(message = "Comment body cannot be empty")
     private String body;
+
+    private UUID parentCommentId;
 }

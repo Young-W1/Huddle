@@ -53,6 +53,7 @@ public class NotificationEntity {
         NEW_FOLLOWER,
         COMMENT_UPVOTE,
         COMMENT_DOWNVOTE,
-        NEW_COMMENT
+        NEW_COMMENT,
+        COMMENT_REPLY
     }
 }

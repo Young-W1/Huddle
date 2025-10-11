@@ -22,8 +22,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString(exclude = {"article", "author", "votes"})
-@EqualsAndHashCode(exclude = {"article", "author", "votes"})
+@ToString(exclude = {"article", "author", "votes", "parentComment", "replies"})
+@EqualsAndHashCode(exclude = {"article", "author", "votes", "parentComment", "replies"})
 public class CommentsEntity {
 
     @Id
@@ -42,6 +42,18 @@ public class CommentsEntity {
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String body;
+
+    // Parent comment for replies
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_comment_id")
+    @JsonIgnore
+    private CommentsEntity parentComment;
+
+    // Child comments (replies)
+    @OneToMany(mappedBy = "parentComment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    @Builder.Default
+    private List<CommentsEntity> replies = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -82,13 +94,11 @@ public class CommentsEntity {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();  // Add this line
-
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
-        System.out.println("PreUpdate called - setting updatedAt to: " + updatedAt);
     }
 }

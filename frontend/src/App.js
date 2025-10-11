@@ -205,7 +205,8 @@ function App() {
                         {/* Profile routes */}
                         <Route path="/profile" element={<CurrentUserProfile />} />
                         <Route path="/profile/me" element={<CurrentUserProfile />} />
-                        <Route path="/profile/:userId" element={<Profile />} />
+                        {/*<Route path="/profile/:userId" element={<Profile />} />*/}
+                        <Route path="/profile/:username" element={<Profile />} />
 
                         <Route path="/notifications" element={<Notifications />} />
                         <Route path="/search" element={<Search />} />

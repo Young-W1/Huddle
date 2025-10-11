@@ -15,4 +15,5 @@ public class UserStatsDto {
     private long newUsersLast7Days;
     private long activeUsersLast30Days;
     private double userGrowthRate;
+    private long newUsersThisWeek;
 }

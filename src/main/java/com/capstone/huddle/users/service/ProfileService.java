@@ -1,5 +1,6 @@
 package com.capstone.huddle.users.service;
 
+import com.capstone.huddle.common.service.ImageUploadService;
 import com.capstone.huddle.users.dto.request.ProfileUpdateRequest;
 import com.capstone.huddle.users.dto.response.ProfileResponse;
 import com.capstone.huddle.users.dto.response.UserResponse;
@@ -12,7 +13,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.UUID;
 
 @Service
@@ -24,6 +27,8 @@ public class ProfileService {
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
     private final FollowRepository followRepository;
+    private final ImageUploadService imageUploadService;
+
 
     public ProfileResponse getUserProfile(UUID userId, String currentUsername) {
         UserEntity user = userRepository.findById(userId)
@@ -72,5 +77,31 @@ public class ProfileService {
 
         ProfileResponse response = getUserProfile(user.getId(), username);
         return new UserResponse<>(true, "Profile updated successfully", response);
+    }
+
+    public String uploadProfilePicture(String username, MultipartFile file) throws IOException {
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        ProfileEntity profile = user.getProfile();
+        if (profile == null) {
+            profile = ProfileEntity.builder()
+                    .user(user)
+                    .build();
+            user.setProfile(profile);
+        }
+
+        // Delete old picture if exists
+        if (profile.getProfilePicture() != null) {
+            imageUploadService.deleteProfilePicture(profile.getProfilePicture());
+        }
+
+        // Upload new picture
+        String imageUrl = imageUploadService.uploadProfilePicture(file, username);
+        profile.setProfilePicture(imageUrl);
+        profileRepository.save(profile);
+
+        log.info("Profile picture updated for user: {}", username);
+        return imageUrl;
     }
 }

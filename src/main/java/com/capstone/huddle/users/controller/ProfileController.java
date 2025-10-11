@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.util.UUID;
@@ -31,20 +32,20 @@ public class ProfileController {
     private final FollowService followService;
     private final ProfileService profileService;
 
-    @GetMapping("/{userId}/profile")
-    @Operation(summary = "Get User Profile", description = "Retrieve user profile information by Id")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized, user not authenticated"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    public ResponseEntity<ProfileResponse> getUserProfile(
-            @PathVariable UUID userId,
-            Principal principal) {
-        String currentUsername = principal != null ? principal.getName() : null;
-        ProfileResponse profile = profileService.getUserProfile(userId, currentUsername);
-        return ResponseEntity.ok(profile);
-    }
+//    @GetMapping("/{userId}/profile")
+//    @Operation(summary = "Get User Profile", description = "Retrieve user profile information by Id")
+//    @ApiResponses(value = {
+//            @ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
+//            @ApiResponse(responseCode = "401", description = "Unauthorized, user not authenticated"),
+//            @ApiResponse(responseCode = "500", description = "Internal server error")
+//    })
+//    public ResponseEntity<ProfileResponse> getUserProfile(
+//            @PathVariable UUID userId,
+//            Principal principal) {
+//        String currentUsername = principal != null ? principal.getName() : null;
+//        ProfileResponse profile = profileService.getUserProfile(userId, currentUsername);
+//        return ResponseEntity.ok(profile);
+//    }
 
     @PutMapping("/profile")
     @Operation(summary = "Update current user's profile", description = "Update the profile information of the currently authenticated user")
@@ -129,4 +130,19 @@ public class ProfileController {
         Page<ProfileResponse> following = followService.getFollowing(userId, pageable, currentUsername);
         return ResponseEntity.ok(following);
     }
+
+    @PostMapping("/profile/picture")
+    @Operation(summary = "Upload profile picture", description = "Upload a profile picture for the current user")
+    public ResponseEntity<UserResponse<String>> uploadProfilePicture(
+            @RequestParam("file") MultipartFile file,
+            Principal principal) {
+        try {
+            String imageUrl = profileService.uploadProfilePicture(principal.getName(), file);
+            return ResponseEntity.ok(new UserResponse<>(true, "Profile picture uploaded successfully", imageUrl));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new UserResponse<>(false, "Failed to upload profile picture: " + e.getMessage(), null));
+        }
+    }
+
 }

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -30,33 +31,9 @@ public class AnalyticsService {
     private final ReportRepository reportRepository;
 
     @Transactional(readOnly = true)
-    public UserStatsDto getUserStats() {
-        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
-
-        long totalUsers = userRepository.count();
-        long newUsersLast7Days = userRepository.countUsersCreatedAfter(sevenDaysAgo);
-        long activeUsersLast30Days = userRepository.countActiveUsersSince(thirtyDaysAgo);
-
-        double growthRate = 0.0;
-        if (totalUsers > newUsersLast7Days) {
-            growthRate = ((double) newUsersLast7Days / (totalUsers - newUsersLast7Days)) * 100;
-        }
-
-        return UserStatsDto.builder()
-                .totalUsers(totalUsers)
-                .newUsersLast7Days(newUsersLast7Days)
-                .activeUsersLast30Days(activeUsersLast30Days)
-                .userGrowthRate(Math.round(growthRate * 100.0) / 100.0)
-                .build();
-    }
-
-    @Transactional(readOnly = true)
     public PostStatsDto getPostStats() {
-        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
-
+        // Get total posts
         long totalPosts = articleRepository.countTotalArticles();
-        long postsLast7Days = articleRepository.countArticlesCreatedAfter(sevenDaysAgo);
 
         // Get posts by category
         List<Object[]> categoryResults = articleRepository.countArticlesByCategory();
@@ -67,25 +44,43 @@ public class AnalyticsService {
             }
         }
 
-        // Get top 10 contributors
-        Pageable topTen = PageRequest.of(0, 10);
-        List<Object[]> contributorResults = articleRepository.getTopContributors(topTen);
-        Map<String, Long> topContributors = new HashMap<>();
+        // Get top 5 contributors (reduced from 10)
+        Pageable topFive = PageRequest.of(0, 5);
+        List<Object[]> contributorResults = articleRepository.getTopContributors(topFive);
+        Map<String, Long> topContributors = new LinkedHashMap<>(); // LinkedHashMap to maintain order
         for (Object[] result : contributorResults) {
             topContributors.put((String) result[0], (Long) result[1]);
         }
 
-        long totalUsers = userRepository.count();
-        double averagePostsPerUser = totalUsers > 0 ? (double) totalPosts / totalUsers : 0.0;
-
         return PostStatsDto.builder()
                 .totalPosts(totalPosts)
-                .postsLast7Days(postsLast7Days)
                 .postsByCategory(postsByCategory)
                 .topContributors(topContributors)
-                .averagePostsPerUser(Math.round(averagePostsPerUser * 100.0) / 100.0)
                 .build();
     }
+
+    @Transactional(readOnly = true)
+    public UserStatsDto getUserStats() {
+        LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+
+        long totalUsers = userRepository.count();
+        long newUsersThisWeek = userRepository.countUsersCreatedAfter(oneWeekAgo);
+        long activeUsersLast30Days = userRepository.countActiveUsersSince(thirtyDaysAgo);
+
+        double growthRate = 0.0;
+        if (totalUsers > newUsersThisWeek) {
+            growthRate = ((double) newUsersThisWeek / (totalUsers - newUsersThisWeek)) * 100;
+        }
+
+        return UserStatsDto.builder()
+                .totalUsers(totalUsers)
+                .newUsersThisWeek(newUsersThisWeek)
+                .activeUsersLast30Days(activeUsersLast30Days)
+                .userGrowthRate(Math.round(growthRate * 100.0) / 100.0)
+                .build();
+    }
+
 
     @Transactional(readOnly = true)
     public ReportStatsDto getReportStats() {

@@ -32,6 +32,10 @@ public class SecurityConfig {
                         .requestMatchers("/", "/huddle/signup", "/huddle/login", "/huddle/logout")
                         .permitAll()
 
+                        // Public access to uploaded files (profile pictures, etc.)
+                        .requestMatchers("/huddle/uploads/**", "/huddle/uploads/profiles/**")
+                        .permitAll()
+
                         // Swagger documentation endpoints
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
                         .permitAll()
@@ -73,8 +77,11 @@ public class SecurityConfig {
                         // Profile management endpoints - require authentication
                         .requestMatchers(HttpMethod.PUT, "/huddle/users/profile")
                         .authenticated()
-                        .requestMatchers(HttpMethod.POST, "/huddle/users/{userId}/follow",
-                                "/huddle/users/{userId}/unfollow")
+                        .requestMatchers(HttpMethod.POST,
+                                "/huddle/users/profile/picture",  // Profile picture upload endpoint
+                                "/huddle/users/{userId}/follow")
+                        .authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/huddle/users/{userId}/unfollow")
                         .authenticated()
 
                         // Notification endpoints - require authentication

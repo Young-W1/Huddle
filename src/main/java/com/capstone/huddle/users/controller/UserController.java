@@ -208,4 +208,39 @@ public class UserController {
                 .build());
     }
 
+    @GetMapping("/users/{username}/profile")
+    @Operation(summary = "Get User Profile by Username", description = "Retrieve user profile information by username")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<UserResponse<ProfileResponse>> getUserProfileByUsername(
+            @PathVariable String username,
+            Authentication authentication) {
+        try {
+            String currentUsername = authentication != null ? authentication.getName() : null;
+
+            // Find user by username
+            UserEntity user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Get profile using the existing service method
+            ProfileResponse profile = profileService.getUserProfile(user.getId(), currentUsername);
+
+            // Get articles count
+            Page<ArticleDataDto> userArticles = articleService.getArticlesByAuthor(username,
+                    PageRequest.of(0, 1));
+            profile.setArticlesCount(userArticles.getTotalElements());
+
+            return ResponseEntity.ok(new UserResponse<>(true, "Profile retrieved successfully", profile));
+        } catch (Exception e) {
+            log.error("Error retrieving user profile for username {}: ", username, e);
+            return ResponseEntity.status(404).body(
+                    new UserResponse<>(false, "Failed to load profile. User may not exist.", null)
+            );
+        }
+    }
+
+
 }

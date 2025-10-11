@@ -70,7 +70,8 @@ function Layout() {
     const menuItems = [
         { text: 'Home', path: '/', icon: <DashboardIcon /> },
         { text: 'Articles', path: '/articles', icon: <ArticleIcon /> },
-        { text: 'Profile', path: '/profile/me', icon: <PersonIcon /> },
+        // { text: 'Profile', path: '/profile/me', icon: <PersonIcon /> },
+        { text: 'Profile', path: `/profile/${username}`, icon: <PersonIcon /> },
         { text: 'Search', path: '/search', icon: <SearchIcon /> },
         { text: 'Notifications', path: '/notifications', icon: <NotificationsIcon /> },
     ];
@@ -100,7 +101,8 @@ function Layout() {
     };
 
     const handleProfileClick = () => {
-        navigate('/profile/me');
+        // navigate('/profile/me');
+        navigate(`/profile/${username}`);
         handleProfileMenuClose();
     };
 

@@ -192,4 +192,13 @@ public class NotificationService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public void createReplyNotification(UserEntity replier, UserEntity parentCommentAuthor,
+                                        UUID articleId, String articleTitle) {
+        String message = String.format("%s replied to your comment on \"%s\"",
+                replier.getUsername(), articleTitle);
+        createNotification(parentCommentAuthor, replier, NotificationType.COMMENT_REPLY, message, articleId);
+    }
+
+
 }

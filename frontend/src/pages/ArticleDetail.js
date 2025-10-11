@@ -23,7 +23,8 @@ import {
     useTheme,
     alpha,
     Skeleton,
-    Badge
+    Badge,
+    Collapse
 } from '@mui/material';
 import {
     ArrowBack,
@@ -36,7 +37,8 @@ import {
     ThumbUp,
     ThumbDown,
     Check,
-    Close
+    Close,
+    Reply as ReplyIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -46,12 +48,14 @@ function ArticleDetail() {
     const theme = useTheme();
     const [article, setArticle] = useState(null);
     const [comments, setComments] = useState([]);
-    const [userVotes, setUserVotes] = useState({}); // Track user's votes
+    const [userVotes, setUserVotes] = useState({});
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editingCommentText, setEditingCommentText] = useState('');
+    const [replyingToCommentId, setReplyingToCommentId] = useState(null);
+    const [replyText, setReplyText] = useState('');
     const currentUsername = localStorage.getItem('username');
 
     useEffect(() => {
@@ -79,20 +83,46 @@ function ArticleDetail() {
             if (response.data.success) {
                 const commentsData = response.data.data?.content || [];
 
-                // Initialize vote counts from comments
-                const voteCounts = {};
+                console.log('Raw comments data:', commentsData); // Debug log
+
+                // Organize comments into a tree structure
+                const commentMap = {};
+                const rootComments = [];
+
+                // First pass: create a map of all comments
                 commentsData.forEach(comment => {
-                    voteCounts[comment.id] = {
-                        upvotes: comment.upvotes || 0,
-                        downvotes: comment.downvotes || 0
-                    };
+                    commentMap[comment.id] = { ...comment, replies: [] };
                 });
 
-                setComments(commentsData);
+                // Second pass: organize into tree structure
+                commentsData.forEach(comment => {
+                    if (comment.parentCommentId) {
+                        // This is a reply
+                        if (commentMap[comment.parentCommentId]) {
+                            commentMap[comment.parentCommentId].replies.push(commentMap[comment.id]);
+                        } else {
+                            // Parent not found, treat as root comment
+                            rootComments.push(commentMap[comment.id]);
+                        }
+                    } else {
+                        // This is a root comment
+                        rootComments.push(commentMap[comment.id]);
+                    }
+                });
+
+                console.log('Organized comments:', rootComments); // Debug log
+                setComments(rootComments);
             }
         } catch (err) {
             console.error('Failed to fetch comments:', err);
         }
+    };
+
+    const isCommentEdited = (comment) => {
+        if (!comment.updatedAt || !comment.createdAt) return false;
+        const createdTime = new Date(comment.createdAt).getTime();
+        const updatedTime = new Date(comment.updatedAt).getTime();
+        return (updatedTime - createdTime) > 5000;
     };
 
     const handleAddComment = async () => {
@@ -110,9 +140,42 @@ function ArticleDetail() {
         }
     };
 
+    const handleReplyClick = (commentId) => {
+        setReplyingToCommentId(commentId);
+        setReplyText('');
+        // Close edit mode if open
+        setEditingCommentId(null);
+    };
+
+    const handleCancelReply = () => {
+        setReplyingToCommentId(null);
+        setReplyText('');
+    };
+
+    const handleSubmitReply = async (parentCommentId) => {
+        if (!replyText.trim()) return;
+
+        try {
+            const response = await axios.post(`/huddle/articles/${articleId}/comments`, {
+                body: replyText,
+                parentCommentId: parentCommentId
+            });
+
+            if (response.data.success) {
+                setReplyText('');
+                setReplyingToCommentId(null);
+                fetchComments();
+            }
+        } catch (err) {
+            setError('Failed to add reply');
+        }
+    };
+
     const handleEditComment = (comment) => {
         setEditingCommentId(comment.id);
         setEditingCommentText(comment.body);
+        // Close reply mode if open
+        setReplyingToCommentId(null);
     };
 
     const handleSaveEdit = async (commentId) => {
@@ -154,47 +217,20 @@ function ArticleDetail() {
                 params: { voteType: voteType }
             });
 
-            // Update local state for immediate feedback
             setUserVotes(prev => {
                 const newVotes = { ...prev };
                 const currentVote = newVotes[commentId];
 
                 if (currentVote === voteType) {
-                    // If clicking same vote, remove it
                     delete newVotes[commentId];
                 } else {
-                    // Set new vote
                     newVotes[commentId] = voteType;
                 }
                 return newVotes;
             });
 
-            // Update comment vote counts locally for immediate feedback
-            setComments(prevComments => {
-                return prevComments.map(comment => {
-                    if (comment.id === commentId) {
-                        const currentVote = userVotes[commentId];
-                        let upvotes = comment.upvotes || 0;
-                        let downvotes = comment.downvotes || 0;
-
-                        // Remove previous vote
-                        if (currentVote === 'UPVOTE') upvotes--;
-                        if (currentVote === 'DOWNVOTE') downvotes--;
-
-                        // Add new vote or toggle off
-                        if (currentVote !== voteType) {
-                            if (voteType === 'UPVOTE') upvotes++;
-                            if (voteType === 'DOWNVOTE') downvotes++;
-                        }
-
-                        return { ...comment, upvotes, downvotes };
-                    }
-                    return comment;
-                });
-            });
-
-            // Optionally refresh from server
-            // fetchComments();
+            // Refresh comments to get updated vote counts
+            fetchComments();
         } catch (err) {
             console.error('Failed to vote on comment:', err);
         }
@@ -218,6 +254,263 @@ function ArticleDetail() {
         const words = content?.split(' ').length || 0;
         const minutes = Math.ceil(words / wordsPerMinute);
         return `${minutes} min read`;
+    };
+
+    // Recursive function to render comment and its replies
+    const renderComment = (comment, depth = 0) => {
+        const isUpvoted = userVotes[comment.id] === 'UPVOTE';
+        const isDownvoted = userVotes[comment.id] === 'DOWNVOTE';
+        const wasEdited = isCommentEdited(comment);
+        const isReplying = replyingToCommentId === comment.id;
+        const isEditing = editingCommentId === comment.id;
+        const maxDepth = 3;
+
+        return (
+            <React.Fragment key={comment.id}>
+                <ListItem
+                    alignItems="flex-start"
+                    sx={{
+                        pl: depth === 0 ? 0 : (depth * 6) + 2, // Increased indentation
+                        pr: 0,
+                        py: 2,
+                        position: 'relative',
+                        bgcolor: depth > 0 ? alpha(theme.palette.grey[100], 0.5) : 'transparent',
+                        borderLeft: depth > 0 ? `3px solid ${theme.palette.primary.main}` : 'none',
+                        ml: depth > 0 ? 3 : 0,
+                        '&:hover': {
+                            bgcolor: alpha(theme.palette.primary.main, 0.03)
+                        }
+                    }}
+                >
+                    {/*/!* Add reply indicator *!/*/}
+                    {/*{depth > 0 && (*/}
+                    {/*    <Box*/}
+                    {/*        sx={{*/}
+                    {/*            position: 'absolute',*/}
+                    {/*            left: depth * 6 - 20,*/}
+                    {/*            top: 25,*/}
+                    {/*            color: theme.palette.text.secondary*/}
+                    {/*        }}*/}
+                    {/*    >*/}
+                    {/*        <ReplyIcon fontSize="small" sx={{ transform: 'rotate(180deg) scaleX(-1)' }} />*/}
+                    {/*    </Box>*/}
+                    {/*)}*/}
+
+                    <ListItemAvatar>
+                        <Avatar
+                            sx={{
+                                bgcolor: depth > 0 ? theme.palette.secondary.main : theme.palette.primary.main,
+                                width: depth > 0 ? 32 : 40,
+                                height: depth > 0 ? 32 : 40,
+                                fontSize: depth > 0 ? '0.875rem' : '1rem'
+                            }}
+                        >
+                            {comment.authorUsername?.[0]?.toUpperCase()}
+                        </Avatar>
+                    </ListItemAvatar>
+
+                    <ListItemText
+                        sx={{ flex: 1, mr: 2 }}
+                        primary={
+                            <Box display="flex" alignItems="center" gap={1} mb={1}>
+                                <Typography
+                                    variant={depth > 0 ? "body2" : "subtitle2"}
+                                    fontWeight={600}
+                                >
+                                    {comment.authorUsername}
+                                </Typography>
+                                {depth > 0 && comment.parentAuthorUsername && (
+                                    <Typography variant="caption" color="primary">
+                                        → @{comment.parentAuthorUsername}
+                                    </Typography>
+                                )}
+                                <Typography variant="caption" color="textSecondary">
+                                    {new Date(comment.createdAt).toLocaleDateString()}
+                                </Typography>
+                                {wasEdited && (
+                                    <Typography variant="caption" color="textSecondary" fontStyle="italic">
+                                        (edited)
+                                    </Typography>
+                                )}
+                            </Box>
+                        }
+                        secondary={
+                            <>
+                                {isEditing ? (
+                                    <Box sx={{ mt: 1 }}>
+                                        <TextField
+                                            fullWidth
+                                            multiline
+                                            rows={3}
+                                            value={editingCommentText}
+                                            onChange={(e) => setEditingCommentText(e.target.value)}
+                                            variant="outlined"
+                                            size="small"
+                                            sx={{ mb: 1 }}
+                                            autoFocus
+                                        />
+                                        <Stack direction="row" spacing={1}>
+                                            <Button
+                                                size="small"
+                                                variant="contained"
+                                                startIcon={<Check />}
+                                                onClick={() => handleSaveEdit(comment.id)}
+                                                disabled={!editingCommentText.trim()}
+                                            >
+                                                Save
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                startIcon={<Close />}
+                                                onClick={handleCancelEdit}
+                                            >
+                                                Cancel
+                                            </Button>
+                                        </Stack>
+                                    </Box>
+                                ) : (
+                                    <>
+                                        <Typography
+                                            variant={depth > 0 ? "body2" : "body1"}
+                                            sx={{
+                                                mt: 1,
+                                                mb: 2,
+                                                whiteSpace: 'pre-wrap',
+                                                color: depth > 0 ? 'text.secondary' : 'text.primary'
+                                            }}
+                                        >
+                                            {comment.body}
+                                        </Typography>
+                                        <Stack direction="row" spacing={2} alignItems="center">
+                                            <Box display="flex" alignItems="center">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleVoteComment(comment.id, 'UPVOTE')}
+                                                    sx={{
+                                                        color: isUpvoted ? theme.palette.primary.main : 'inherit',
+                                                        '&:hover': { color: theme.palette.primary.main }
+                                                    }}
+                                                >
+                                                    <ThumbUp fontSize="small" />
+                                                </IconButton>
+                                                <Typography variant="caption" sx={{ mx: 0.5 }}>
+                                                    {comment.upvotes || 0}
+                                                </Typography>
+                                            </Box>
+                                            <Box display="flex" alignItems="center">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleVoteComment(comment.id, 'DOWNVOTE')}
+                                                    sx={{
+                                                        color: isDownvoted ? theme.palette.error.main : 'inherit',
+                                                        '&:hover': { color: theme.palette.error.main }
+                                                    }}
+                                                >
+                                                    <ThumbDown fontSize="small" />
+                                                </IconButton>
+                                                <Typography variant="caption" sx={{ mx: 0.5 }}>
+                                                    {comment.downvotes || 0}
+                                                </Typography>
+                                            </Box>
+                                            {depth < maxDepth && (
+                                                <Button
+                                                    size="small"
+                                                    startIcon={<ReplyIcon />}
+                                                    onClick={() => handleReplyClick(comment.id)}
+                                                    disabled={isReplying}
+                                                    sx={{
+                                                        textTransform: 'none',
+                                                        color: 'text.secondary',
+                                                        '&:hover': { color: 'primary.main' }
+                                                    }}
+                                                >
+                                                    Reply
+                                                </Button>
+                                            )}
+                                        </Stack>
+                                    </>
+                                )}
+                            </>
+                        }
+                    />
+
+                    {comment.authorUsername === currentUsername && !isEditing && !isReplying && (
+                        <Stack direction="row" spacing={0.5}>
+                            <IconButton
+                                size="small"
+                                onClick={() => handleEditComment(comment)}
+                                color="primary"
+                            >
+                                <Edit fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                                size="small"
+                                onClick={() => handleDeleteComment(comment.id)}
+                                color="error"
+                            >
+                                <Delete fontSize="small" />
+                            </IconButton>
+                        </Stack>
+                    )}
+                </ListItem>
+
+                {/* Reply input box */}
+                <Collapse in={isReplying}>
+                    <Box sx={{
+                        pl: depth === 0 ? 8 : (depth + 1) * 6 + 8,
+                        pr: 2,
+                        py: 2,
+                        bgcolor: alpha(theme.palette.primary.main, 0.02),
+                        borderLeft: `3px solid ${theme.palette.primary.light}`,
+                        ml: depth > 0 ? 3 : 0
+                    }}>
+                        <TextField
+                            fullWidth
+                            multiline
+                            rows={2}
+                            placeholder={`Reply to @${comment.authorUsername}...`}
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            variant="outlined"
+                            size="small"
+                            sx={{ mb: 1 }}
+                            autoFocus
+                        />
+                        <Stack direction="row" spacing={1}>
+                            <Button
+                                size="small"
+                                variant="contained"
+                                onClick={() => handleSubmitReply(comment.id)}
+                                disabled={!replyText.trim()}
+                            >
+                                Post Reply
+                            </Button>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={handleCancelReply}
+                            >
+                                Cancel
+                            </Button>
+                        </Stack>
+                    </Box>
+                </Collapse>
+
+                {/* Render replies with clear nesting */}
+                {comment.replies && comment.replies.length > 0 && (
+                    <Box sx={{
+                        borderLeft: depth === 0 ? 'none' : `1px dashed ${alpha(theme.palette.divider, 0.3)}`,
+                        ml: depth === 0 ? 0 : 4
+                    }}>
+                        {comment.replies.map(reply => renderComment(reply, depth + 1))}
+                    </Box>
+                )}
+
+                {/* Only show divider for root comments */}
+                {depth === 0 && <Divider variant="fullWidth" sx={{ mt: 2 }} />}
+            </React.Fragment>
+        );
     };
 
     if (loading) {
@@ -393,133 +686,7 @@ function ArticleDetail() {
                         <Divider sx={{ my: 3 }} />
 
                         <List>
-                            {comments.map((comment) => {
-                                const isUpvoted = userVotes[comment.id] === 'UPVOTE';
-                                const isDownvoted = userVotes[comment.id] === 'DOWNVOTE';
-
-                                return (
-                                    <React.Fragment key={comment.id}>
-                                        <ListItem alignItems="flex-start" sx={{ px: 0, py: 2 }}>
-                                            <ListItemAvatar>
-                                                <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
-                                                    {comment.authorUsername?.[0]?.toUpperCase()}
-                                                </Avatar>
-                                            </ListItemAvatar>
-                                            <ListItemText
-                                                sx={{ flex: 1 }}
-                                                primary={
-                                                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                                                        <Typography variant="subtitle2" fontWeight={600}>
-                                                            {comment.authorUsername}
-                                                        </Typography>
-                                                        <Typography variant="caption" color="textSecondary">
-                                                            {new Date(comment.createdAt).toLocaleDateString()}
-                                                        </Typography>
-                                                        {comment.updatedAt && comment.updatedAt !== comment.createdAt && (
-                                                            <Typography variant="caption" color="textSecondary" fontStyle="italic">
-                                                                (edited)
-                                                            </Typography>
-                                                        )}
-                                                    </Box>
-                                                }
-                                                secondary={
-                                                    <>
-                                                        {editingCommentId === comment.id ? (
-                                                            <Box sx={{ mt: 1 }}>
-                                                                <TextField
-                                                                    fullWidth
-                                                                    multiline
-                                                                    rows={3}
-                                                                    value={editingCommentText}
-                                                                    onChange={(e) => setEditingCommentText(e.target.value)}
-                                                                    variant="outlined"
-                                                                    size="small"
-                                                                    sx={{ mb: 1 }}
-                                                                    autoFocus
-                                                                />
-                                                                <Stack direction="row" spacing={1}>
-                                                                    <Button
-                                                                        size="small"
-                                                                        variant="contained"
-                                                                        startIcon={<Check />}
-                                                                        onClick={() => handleSaveEdit(comment.id)}
-                                                                        disabled={!editingCommentText.trim()}
-                                                                    >
-                                                                        Save
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        startIcon={<Close />}
-                                                                        onClick={handleCancelEdit}
-                                                                    >
-                                                                        Cancel
-                                                                    </Button>
-                                                                </Stack>
-                                                            </Box>
-                                                        ) : (
-                                                            <>
-                                                                <Typography variant="body2" sx={{ mt: 1, mb: 2, whiteSpace: 'pre-wrap' }}>
-                                                                    {comment.body}
-                                                                </Typography>
-                                                                <Stack direction="row" spacing={2} alignItems="center">
-                                                                    <Box display="flex" alignItems="center">
-                                                                        <IconButton
-                                                                            size="small"
-                                                                            onClick={() => handleVoteComment(comment.id, 'UPVOTE')}
-                                                                            sx={{
-                                                                                color: isUpvoted ? theme.palette.primary.main : 'inherit'
-                                                                            }}
-                                                                        >
-                                                                            <ThumbUp fontSize="small" />
-                                                                        </IconButton>
-                                                                        <Typography variant="caption" sx={{ mx: 0.5 }}>
-                                                                            {comment.upvotes || 0}
-                                                                        </Typography>
-                                                                    </Box>
-                                                                    <Box display="flex" alignItems="center">
-                                                                        <IconButton
-                                                                            size="small"
-                                                                            onClick={() => handleVoteComment(comment.id, 'DOWNVOTE')}
-                                                                            sx={{
-                                                                                color: isDownvoted ? theme.palette.error.main : 'inherit'
-                                                                            }}
-                                                                        >
-                                                                            <ThumbDown fontSize="small" />
-                                                                        </IconButton>
-                                                                        <Typography variant="caption" sx={{ mx: 0.5 }}>
-                                                                            {comment.downvotes || 0}
-                                                                        </Typography>
-                                                                    </Box>
-                                                                </Stack>
-                                                            </>
-                                                        )}
-                                                    </>
-                                                }
-                                            />
-                                            {comment.authorUsername === currentUsername && editingCommentId !== comment.id && (
-                                                <Stack direction="row" spacing={0.5}>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => handleEditComment(comment)}
-                                                        color="primary"
-                                                    >
-                                                        <Edit fontSize="small" />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => handleDeleteComment(comment.id)}
-                                                        color="error"
-                                                    >
-                                                        <Delete fontSize="small" />
-                                                    </IconButton>
-                                                </Stack>
-                                            )}
-                                        </ListItem>
-                                        <Divider variant="inset" component="li" />
-                                    </React.Fragment>
-                                );
-                            })}
+                            {comments.map((comment) => renderComment(comment, 0))}
                         </List>
 
                         {comments.length === 0 && (

@@ -32,18 +32,25 @@ public class CommentsService {
     private final NotificationService notificationService;
 
     @Transactional
-    public CommentResponseDto addComment(UUID articleId, String authorUsername, String body) {
+    public CommentResponseDto addComment(UUID articleId, String authorUsername, String body, UUID parentCommentId) {
         ArticleEntity article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new EntityNotFoundException("Article not found"));
         UserEntity author = userRepository.findByUsername(authorUsername)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        CommentsEntity comment = CommentsEntity.builder()
+        CommentsEntity.CommentsEntityBuilder commentBuilder = CommentsEntity.builder()
                 .article(article)
                 .author(author)
-                .body(body)
-                .build();
+                .body(body);
 
+        // Handle parent comment if provided
+        if (parentCommentId != null) {
+            CommentsEntity parentComment = commentsRepository.findById(parentCommentId)
+                    .orElseThrow(() -> new EntityNotFoundException("Parent comment not found"));
+            commentBuilder.parentComment(parentComment);
+        }
+
+        CommentsEntity comment = commentBuilder.build();
         CommentsEntity savedComment = commentsRepository.save(comment);
 
         // Send notification to article author if commenter is not the article author
@@ -51,6 +58,17 @@ public class CommentsService {
             notificationService.createNewCommentNotification(
                     author,
                     article.getAuthor(),
+                    articleId,
+                    article.getTitle()
+            );
+        }
+
+        // Send notification to parent comment author if this is a reply
+        if (savedComment.getParentComment() != null &&
+                !savedComment.getParentComment().getAuthor().getUsername().equals(authorUsername)) {
+            notificationService.createReplyNotification(
+                    author,
+                    savedComment.getParentComment().getAuthor(),
                     articleId,
                     article.getTitle()
             );
@@ -150,14 +168,28 @@ public class CommentsService {
 
     // method to convert entity to DTO
     private CommentResponseDto mapToDto(CommentsEntity comment) {
-        return CommentResponseDto.builder()
+        CommentResponseDto.CommentResponseDtoBuilder dtoBuilder = CommentResponseDto.builder()
                 .id(comment.getId())
                 .body(comment.getBody())
                 .authorUsername(comment.getAuthor().getUsername())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
                 .articleId(comment.getArticle().getId())
-                .articleTitle(comment.getArticle().getTitle())
-                .build();
+                .articleTitle(comment.getArticle().getTitle());
+
+        // Only add parentCommentId if parent exists
+        if (comment.getParentComment() != null) {
+            dtoBuilder.parentCommentId(comment.getParentComment().getId());
+        }
+
+        // Add vote counts if they exist
+        if (comment.getUpvotes() != null) {
+            dtoBuilder.upvotes(comment.getUpvotes());
+        }
+        if (comment.getDownvotes() != null) {
+            dtoBuilder.downvotes(comment.getDownvotes());
+        }
+
+        return dtoBuilder.build();
     }
 }

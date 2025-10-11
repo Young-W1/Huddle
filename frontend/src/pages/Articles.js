@@ -483,11 +483,7 @@ function Articles() {
                                 }}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    if (article.authorId) {
-                                        navigate(`/profile/${article.authorId}`);
-                                    } else if (article.authorUsername === currentUsername) {
-                                        navigate('/profile');
-                                    }
+                                    navigate(`/profile/${article.authorUsername}`);
                                 }}
                             >
                                 {article.authorUsername?.[0]?.toUpperCase()}
@@ -502,11 +498,7 @@ function Articles() {
                                     }}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        if (article.authorId) {
-                                            navigate(`/profile/${article.authorId}`);
-                                        } else if (article.authorUsername === currentUsername) {
-                                            navigate('/profile');
-                                        }
+                                        navigate(`/profile/${article.authorUsername}`);
                                     }}
                                 >
                                     {article.authorUsername}

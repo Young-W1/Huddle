@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Container,
@@ -47,7 +47,7 @@ import {
 import axios from 'axios';
 
 function Profile() {
-    const { userId } = useParams();
+    const { username } = useParams(); // Changed from userId to username
     const navigate = useNavigate();
     const theme = useTheme();
 
@@ -68,16 +68,36 @@ function Profile() {
     });
     const [isOwnProfile, setIsOwnProfile] = useState(false);
     const [isFollowing, setIsFollowing] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef(null);
 
     const currentUsername = localStorage.getItem('username');
 
     useEffect(() => {
-        if (userId === 'me') {
-            fetchCurrentUserProfile();
-        } else if (userId) {
-            fetchProfile(userId);
+        // Debug logging
+        console.log('Profile useEffect - username from URL:', username);
+        console.log('Profile useEffect - current username:', currentUsername);
+
+        if (!username) {
+            setError('No username provided');
+            setLoading(false);
+            return;
         }
-    }, [userId]);
+
+        // Reset states when username changes
+        setLoading(true);
+        setError('');
+
+        // Fetch the profile
+        if (username === 'me' || username === currentUsername) {
+            console.log('Fetching current user profile');
+            fetchCurrentUserProfile();
+        } else {
+            console.log('Fetching profile for:', username);
+            fetchProfile(username);
+        }
+    }, [username]); // Remove currentUsername from dependencies
+
 
     const fetchCurrentUserProfile = async () => {
         try {
@@ -130,15 +150,15 @@ function Profile() {
         }
     };
 
-    const fetchProfile = async (profileId) => {
+    const fetchProfile = async (profileUsername) => {
         try {
             setLoading(true);
             setError('');
 
-            const response = await axios.get(`/huddle/users/${profileId}/profile`);
+            const response = await axios.get(`/huddle/users/${profileUsername}/profile`);
 
-            if (response.data) {
-                const profileData = response.data;
+            if (response.data.success && response.data.data) {
+                const profileData = response.data.data;
 
                 setProfile({
                     userId: profileData.userId,
@@ -169,8 +189,10 @@ function Profile() {
                     fetchUserArticles(profileData.username);
                 }
 
-                fetchFollowers(profileId);
-                fetchFollowing(profileId);
+                if (profileData.userId) {
+                    fetchFollowers(profileData.userId);
+                    fetchFollowing(profileData.userId);
+                }
             }
         } catch (err) {
             console.error('Failed to fetch profile:', err);
@@ -280,6 +302,50 @@ function Profile() {
         }
     };
 
+    const handleProfilePictureUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            return;
+        }
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await axios.post('/huddle/users/profile/picture', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (response.data.success) {
+                setProfile(prev => ({
+                    ...prev,
+                    profilePicture: response.data.data
+                }));
+                setEditData(prev => ({
+                    ...prev,
+                    profilePicture: response.data.data
+                }));
+                alert('Profile picture uploaded successfully');
+            }
+        } catch (err) {
+            console.error('Failed to upload profile picture:', err);
+            alert('Failed to upload profile picture');
+        } finally {
+            setUploading(false);
+        }
+    };
+
     const handleUpdateProfile = async () => {
         try {
             const response = await axios.put('/huddle/users/profile', editData);
@@ -353,23 +419,56 @@ function Profile() {
                                     mb: 3
                                 }}
                             >
-                                {/* Avatar */}
-                                <Avatar
-                                    src={profile.profilePicture}
-                                    sx={{
-                                        width: 150,
-                                        height: 150,
-                                        border: `4px solid ${theme.palette.background.paper}`,
-                                        backgroundColor: theme.palette.primary.main,
-                                        fontSize: '3rem',
-                                        boxShadow: theme.shadows[3],
-                                        mt: -10
-                                    }}
-                                >
-                                    {profile.username?.[0]?.toUpperCase()}
-                                </Avatar>
+                                {/* Avatar with upload button */}
+                                <Box position="relative">
+                                    <Avatar
+                                        src={profile.profilePicture}
+                                        sx={{
+                                            width: 150,
+                                            height: 150,
+                                            border: `4px solid ${theme.palette.background.paper}`,
+                                            backgroundColor: theme.palette.primary.main,
+                                            fontSize: '3rem',
+                                            boxShadow: theme.shadows[3],
+                                            mt: -10
+                                        }}
+                                    >
+                                        {profile.username?.[0]?.toUpperCase()}
+                                    </Avatar>
+                                    {isOwnProfile && (
+                                        <>
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                style={{ display: 'none' }}
+                                                onChange={handleProfilePictureUpload}
+                                                disabled={uploading}
+                                            />
+                                            <IconButton
+                                                sx={{
+                                                    position: 'absolute',
+                                                    bottom: 0,
+                                                    right: 0,
+                                                    backgroundColor: theme.palette.background.paper,
+                                                    '&:hover': {
+                                                        backgroundColor: theme.palette.action.hover,
+                                                    },
+                                                    boxShadow: theme.shadows[2],
+                                                }}
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={uploading}
+                                            >
+                                                {uploading ? (
+                                                    <CircularProgress size={20} />
+                                                ) : (
+                                                    <CameraAlt />
+                                                )}
+                                            </IconButton>
+                                        </>
+                                    )}
+                                </Box>
 
-                                {/* User Info and Actions */}
                                 {/* User Info and Actions */}
                                 <Box
                                     sx={{
@@ -392,28 +491,25 @@ function Profile() {
                                         }}
                                     >
                                         <Box>
-                                            {/* Username - with explicit dark color for contrast */}
                                             <Typography
                                                 variant="h3"
                                                 sx={{
                                                     fontWeight: 500,
                                                     mb: 1,
-                                                    color: theme.palette.text.primary,  // Explicit dark color instead of theme color
+                                                    color: theme.palette.text.primary,
                                                     letterSpacing: '-0.5px',
-                                                    // textShadow: '0px 2px 4px rgba(0,0,0,0.1)',  // Add shadow for better visibility
-                                                    zIndex: 10,  // Ensure it's above other elements
-                                                    position: 'relative'  // Position relative for z-index to work
+                                                    zIndex: 10,
+                                                    position: 'relative'
                                                 }}
                                             >
                                                 {profile.username || 'No Username'}
                                             </Typography>
 
-                                            {/* Email - secondary information */}
                                             {profile.email && (
                                                 <Typography
                                                     variant="body1"
                                                     sx={{
-                                                        color: '#666666',  // Explicit grey color
+                                                        color: '#666666',
                                                         fontSize: '1rem',
                                                         fontWeight: 400,
                                                         zIndex: 10,
@@ -432,7 +528,7 @@ function Profile() {
                                                     startIcon={<Edit />}
                                                     onClick={() => setEditDialog(true)}
                                                     sx={{
-                                                        backgroundColor: '#ffffff',  // Explicit white background
+                                                        backgroundColor: '#ffffff',
                                                         color: theme.palette.primary.main,
                                                         border: `2px solid ${theme.palette.primary.main}`,
                                                         fontWeight: 600,
@@ -489,20 +585,13 @@ function Profile() {
                                         </Stack>
                                     </Box>
 
-                                    {/* Add a debug check to see what's in profile */}
-                                    {!profile.username && (
-                                        <Alert severity="warning" sx={{ mt: 2, width: '100%' }}>
-                                            Username not loaded properly
-                                        </Alert>
-                                    )}
-
                                     {profile.bio && (
                                         <Typography
                                             variant="body1"
                                             sx={{
                                                 mt: 2,
                                                 maxWidth: '800px',
-                                                color: '#333333',  // Explicit dark color
+                                                color: '#333333',
                                                 zIndex: 10,
                                                 position: 'relative'
                                             }}
@@ -658,7 +747,7 @@ function Profile() {
                                             <ListItem
                                                 key={follower.userId}
                                                 button
-                                                onClick={() => navigate(`/profile/${follower.userId}`)}
+                                                onClick={() => navigate(`/profile/${follower.username}`)}
                                                 sx={{
                                                     borderRadius: 1,
                                                     mb: 1,
@@ -692,7 +781,7 @@ function Profile() {
                                             <ListItem
                                                 key={user.userId}
                                                 button
-                                                onClick={() => navigate(`/profile/${user.userId}`)}
+                                                onClick={() => navigate(`/profile/${user.username}`)}
                                                 sx={{
                                                     borderRadius: 1,
                                                     mb: 1,
@@ -730,6 +819,17 @@ function Profile() {
                 <DialogTitle>Edit Profile</DialogTitle>
                 <DialogContent>
                     <Stack spacing={3} sx={{ mt: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Avatar
+                                src={editData.profilePicture}
+                                sx={{ width: 80, height: 80 }}
+                            >
+                                {profile.username?.[0]?.toUpperCase()}
+                            </Avatar>
+                            <Typography variant="body2" color="text.secondary">
+                                Use the camera icon on your avatar to upload a new profile picture
+                            </Typography>
+                        </Box>
                         <TextField
                             fullWidth
                             label="Bio"
@@ -749,12 +849,6 @@ function Profile() {
                             label="Website"
                             value={editData.website}
                             onChange={(e) => setEditData({...editData, website: e.target.value})}
-                        />
-                        <TextField
-                            fullWidth
-                            label="Profile Picture URL"
-                            value={editData.profilePicture}
-                            onChange={(e) => setEditData({...editData, profilePicture: e.target.value})}
                         />
                     </Stack>
                 </DialogContent>

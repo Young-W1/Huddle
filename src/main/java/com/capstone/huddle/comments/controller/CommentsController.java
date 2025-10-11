@@ -50,7 +50,9 @@ public class CommentsController {
             CommentResponseDto comment = commentsService.addComment(
                     articleId,
                     principal.getName(),
-                    commentsRequest.getBody()
+                    commentsRequest.getBody(),
+                    commentsRequest.getParentCommentId()
+
             );
 
             CommentsResponse<CommentResponseDto> response = CommentsResponse.<CommentResponseDto>builder()
