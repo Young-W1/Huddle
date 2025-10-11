@@ -2,12 +2,10 @@ import axios from 'axios';
 
 // const API_BASE_URL = '/huddle';
 // src/config/api.js or wherever you configure axios
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
-
-axios.defaults.baseURL = API_BASE_URL;
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:6061';
 
 const api = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: `${API_BASE_URL}/huddle`,
     headers: {
         'Content-Type': 'application/json',
     },
