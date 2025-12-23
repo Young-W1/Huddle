@@ -32,6 +32,10 @@ public class SecurityConfig {
                         .requestMatchers("/", "/huddle/signup", "/huddle/login", "/huddle/logout")
                         .permitAll()
 
+                        // Actuator health endpoint for Render health checks
+                        .requestMatchers("/actuator/**", "/actuator/health")
+                        .permitAll()
+
                         // Public access to uploaded files (profile pictures, etc.)
                         .requestMatchers("/huddle/uploads/**", "/huddle/uploads/profiles/**")
                         .permitAll()
