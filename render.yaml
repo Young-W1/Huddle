@@ -5,7 +5,6 @@ services:
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /actuator/health
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: production
@@ -31,6 +30,8 @@ services:
         value: "false"
       - key: DEV_MODE
         value: "false"
+      - key: APP_BASE_URL
+        value: https://huddle-frontend.onrender.com
 
   # Frontend React App
   - type: web
