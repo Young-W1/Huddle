@@ -1,6 +1,7 @@
 package com.capstone.huddle.articles.repository;
 
 import com.capstone.huddle.articles.model.ArticleEntity;
+import com.capstone.huddle.articles.model.ArticleStatus;
 import com.capstone.huddle.users.model.UserEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -69,4 +70,17 @@ public interface ArticleRepository extends JpaRepository<ArticleEntity, UUID>, J
     @Query("SELECT a.author.username, COUNT(a) as postCount FROM ArticleEntity a GROUP BY a.author.username ORDER BY postCount DESC")
     List<Object[]> getTopContributors(Pageable pageable);
 
+    // Draft-related queries
+    @Query("SELECT a FROM ArticleEntity a WHERE a.author.username = :username AND a.status = :status ORDER BY a.updatedAt DESC")
+    Page<ArticleEntity> findByAuthorUsernameAndStatus(@Param("username") String username, @Param("status") ArticleStatus status, Pageable pageable);
+
+    @Query("SELECT a FROM ArticleEntity a WHERE a.status = 'PUBLISHED' ORDER BY a.createdAt DESC")
+    Page<ArticleEntity> findPublishedArticles(Pageable pageable);
+
+    @Query("SELECT a FROM ArticleEntity a WHERE a.status = 'PUBLISHED' AND " +
+            "(LOWER(a.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(a.content) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<ArticleEntity> searchPublishedArticles(@Param("searchTerm") String searchTerm, Pageable pageable);
+
+    long countByAuthorAndStatus(UserEntity author, ArticleStatus status);
 }

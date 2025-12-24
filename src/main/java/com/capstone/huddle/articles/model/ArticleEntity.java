@@ -38,6 +38,14 @@ public class ArticleEntity {
     @Column(length = 100)
     private String category;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private ArticleStatus status = ArticleStatus.PUBLISHED;
+
+    @Column
+    private LocalDateTime publishedAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore

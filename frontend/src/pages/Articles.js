@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Container,
     Typography,
@@ -50,12 +50,22 @@ import {
     TrendingUp,
     Flag,
     Report,
-    MoreVert
+    MoreVert,
+    Bookmark,
+    BookmarkBorder,
+    Drafts,
+    ContentCopy,
+    Twitter,
+    Facebook,
+    LinkedIn,
+    WhatsApp,
+    Email
 } from '@mui/icons-material';
 import axios from 'axios';
 
 function Articles() {
     const navigate = useNavigate();
+    const location = useLocation();
     const theme = useTheme();
     const [articles, setArticles] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -73,6 +83,7 @@ function Articles() {
     const [sortBy, setSortBy] = useState('newest');
     const [viewMode, setViewMode] = useState('grid');
     const [userRatings, setUserRatings] = useState({});
+    const [bookmarks, setBookmarks] = useState({});
     const currentUsername = localStorage.getItem('username');
 
     // Report functionality states
@@ -83,16 +94,79 @@ function Articles() {
     const [anchorEl, setAnchorEl] = useState(null);
     const [menuArticle, setMenuArticle] = useState(null);
 
+    // Share functionality states
+    const [shareDialog, setShareDialog] = useState(false);
+    const [sharingArticle, setSharingArticle] = useState(null);
+
+    // Track if initial tab has been set from URL
+    const [initialTabSet, setInitialTabSet] = useState(false);
+
+    // Handle tab query parameter from URL - runs first
     useEffect(() => {
-        fetchArticles();
-    }, [activeTab, sortBy]);
+        const params = new URLSearchParams(location.search);
+        const tab = params.get('tab');
+        if (tab && ['all', 'my', 'bookmarks', 'drafts'].includes(tab)) {
+            setActiveTab(tab);
+        }
+        setInitialTabSet(true);
+    }, [location.search]);
+
+    // Fetch articles only after initial tab is set
+    useEffect(() => {
+        if (initialTabSet) {
+            fetchArticles();
+            fetchBookmarkStatuses();
+        }
+    }, [activeTab, sortBy, initialTabSet]);
+
+    const fetchBookmarkStatuses = async () => {
+        try {
+            const response = await axios.get('/huddle/bookmarks');
+            if (response.data.success && response.data.data.content) {
+                const bookmarkMap = {};
+                response.data.data.content.forEach(article => {
+                    bookmarkMap[article.id] = true;
+                });
+                setBookmarks(bookmarkMap);
+            }
+        } catch (err) {
+            console.log('Could not fetch bookmarks:', err);
+        }
+    };
+
+    const handleToggleBookmark = async (e, articleId) => {
+        e.stopPropagation();
+        try {
+            if (bookmarks[articleId]) {
+                await axios.delete(`/huddle/bookmarks/${articleId}`);
+                setBookmarks(prev => ({ ...prev, [articleId]: false }));
+                setSuccess('Bookmark removed');
+            } else {
+                await axios.post(`/huddle/bookmarks/${articleId}`);
+                setBookmarks(prev => ({ ...prev, [articleId]: true }));
+                setSuccess('Article bookmarked');
+            }
+        } catch (err) {
+            console.error('Error toggling bookmark:', err);
+            setError('Failed to update bookmark');
+        }
+    };
 
     const fetchArticles = async () => {
         setLoading(true);
+        setError('');
         try {
             let response;
             if (activeTab === 'my') {
                 response = await axios.get('/huddle/articles/my-articles', {
+                    params: { size: 50, sort: getSortParam() }
+                });
+            } else if (activeTab === 'bookmarks') {
+                response = await axios.get('/huddle/bookmarks', {
+                    params: { size: 50, sort: getSortParam() }
+                });
+            } else if (activeTab === 'drafts') {
+                response = await axios.get('/huddle/articles/my-drafts', {
                     params: { size: 50, sort: getSortParam() }
                 });
             } else {
@@ -102,12 +176,26 @@ function Articles() {
             }
 
             if (response.data.success) {
-                const articlesData = response.data.data.content || [];
+                // Handle different response structures
+                let articlesData = [];
+                if (response.data.data) {
+                    if (response.data.data.content) {
+                        articlesData = response.data.data.content;
+                    } else if (Array.isArray(response.data.data)) {
+                        articlesData = response.data.data;
+                    }
+                }
                 setArticles(articlesData);
+            } else {
+                setError(response.data.message || 'Failed to fetch articles');
             }
         } catch (err) {
-            setError('Failed to fetch articles');
             console.error('Failed to fetch articles:', err);
+            if (err.response?.status === 401) {
+                setError('Please log in to view this content');
+            } else {
+                setError(err.response?.data?.message || 'Failed to fetch articles');
+            }
         } finally {
             setLoading(false);
         }
@@ -122,21 +210,27 @@ function Articles() {
         }
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (saveAsDraft = false) => {
         try {
             const url = editMode
                 ? `/huddle/articles/update/${currentArticle.id}`
                 : '/huddle/articles/create';
 
             const method = editMode ? 'put' : 'post';
+            const status = saveAsDraft ? 'DRAFT' : 'PUBLISHED';
 
             await axios[method](url, {
                 title: currentArticle.title,
                 content: currentArticle.content,
-                tags: currentArticle.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+                tags: currentArticle.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+                status: status
             });
 
-            setSuccess(editMode ? 'Article updated successfully!' : 'Article created successfully!');
+            const message = saveAsDraft
+                ? 'Article saved as draft!'
+                : (editMode ? 'Article updated successfully!' : 'Article published successfully!');
+
+            setSuccess(message);
             setOpenDialog(false);
             setCurrentArticle({ title: '', content: '', tags: '' });
             fetchArticles();
@@ -177,17 +271,68 @@ function Articles() {
     };
 
     const handleShare = (article) => {
-        const url = `${window.location.origin}/articles/${article.id}`;
-        if (navigator.share) {
-            navigator.share({
-                title: article.title,
-                text: article.content.substring(0, 100) + '...',
-                url: url,
-            }).catch(err => console.log('Error sharing:', err));
-        } else {
-            navigator.clipboard.writeText(url);
-            setSuccess('Link copied to clipboard!');
+        setSharingArticle(article);
+        setShareDialog(true);
+    };
+
+    const handleSharePlatform = async (platform) => {
+        if (!sharingArticle) return;
+
+        const url = `${window.location.origin}/articles/${sharingArticle.id}`;
+        const title = encodeURIComponent(sharingArticle.title);
+        const text = encodeURIComponent(sharingArticle.content.substring(0, 100) + '...');
+
+        let shareUrl = '';
+
+        switch (platform) {
+            case 'twitter':
+                shareUrl = `https://twitter.com/intent/tweet?text=${title}&url=${encodeURIComponent(url)}`;
+                break;
+            case 'facebook':
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+                break;
+            case 'linkedin':
+                shareUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}&title=${title}`;
+                break;
+            case 'whatsapp':
+                shareUrl = `https://wa.me/?text=${title}%20${encodeURIComponent(url)}`;
+                break;
+            case 'email':
+                shareUrl = `mailto:?subject=${title}&body=Check out this article: ${encodeURIComponent(url)}`;
+                break;
+            case 'copy':
+                await navigator.clipboard.writeText(url);
+                setSuccess('Link copied to clipboard!');
+                setShareDialog(false);
+                setSharingArticle(null);
+
+                // Record the share
+                try {
+                    await axios.post(`/huddle/articles/${sharingArticle.id}/share`, null, {
+                        params: { platform: 'LINK_COPY' }
+                    });
+                } catch (err) {
+                    console.log('Could not record share:', err);
+                }
+                return;
+            default:
+                return;
         }
+
+        // Open share URL in new window
+        window.open(shareUrl, '_blank', 'width=600,height=400');
+
+        // Record the share
+        try {
+            await axios.post(`/huddle/articles/${sharingArticle.id}/share`, null, {
+                params: { platform: platform.toUpperCase() }
+            });
+        } catch (err) {
+            console.log('Could not record share:', err);
+        }
+
+        setShareDialog(false);
+        setSharingArticle(null);
     };
 
     const handleRateArticle = async (articleId, newValue) => {
@@ -242,10 +387,6 @@ function Articles() {
 
             if (response.data.success) {
                 setSuccess('Article reported successfully. Our team will review it.');
-                setReportDialog(false);
-                setReportReason('');
-                setReportDescription('');
-                setReportingArticle(null);
             }
         } catch (err) {
             console.error('Failed to report article:', err);
@@ -256,6 +397,12 @@ function Articles() {
             } else {
                 setError('Failed to report article. Please try again.');
             }
+        } finally {
+            // Always close the dialog and reset state
+            setReportDialog(false);
+            setReportReason('');
+            setReportDescription('');
+            setReportingArticle(null);
         }
     };
 
@@ -589,6 +736,17 @@ function Articles() {
                             <Box display="flex" alignItems="center" gap={0.5} ml="auto">
                                 <IconButton
                                     size="small"
+                                    onClick={(e) => handleToggleBookmark(e, article.id)}
+                                    sx={{
+                                        color: bookmarks[article.id]
+                                            ? theme.palette.primary.main
+                                            : theme.palette.text.secondary
+                                    }}
+                                >
+                                    {bookmarks[article.id] ? <Bookmark fontSize="small" /> : <BookmarkBorder fontSize="small" />}
+                                </IconButton>
+                                <IconButton
+                                    size="small"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleShare(article);
@@ -669,7 +827,7 @@ function Articles() {
                 {/* Controls */}
                 <Paper elevation={1} sx={{ p: 2, mb: 3, borderRadius: 2 }}>
                     <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={12} md={3}>
+                        <Grid item xs={12} md={5}>
                             <ToggleButtonGroup
                                 value={activeTab}
                                 exclusive
@@ -678,15 +836,21 @@ function Articles() {
                                 size="small"
                             >
                                 <ToggleButton value="all">
-                                    <Public sx={{ mr: 1 }} /> All
+                                    <Public sx={{ mr: 0.5 }} fontSize="small" /> All
                                 </ToggleButton>
                                 <ToggleButton value="my">
-                                    <PersonOutline sx={{ mr: 1 }} /> My Articles
+                                    <PersonOutline sx={{ mr: 0.5 }} fontSize="small" /> Mine
+                                </ToggleButton>
+                                <ToggleButton value="bookmarks">
+                                    <Bookmark sx={{ mr: 0.5 }} fontSize="small" /> Saved
+                                </ToggleButton>
+                                <ToggleButton value="drafts">
+                                    <Drafts sx={{ mr: 0.5 }} fontSize="small" /> Drafts
                                 </ToggleButton>
                             </ToggleButtonGroup>
                         </Grid>
 
-                        <Grid item xs={12} md={3}>
+                        <Grid item xs={12} md={2}>
                             <FormControl fullWidth size="small">
                                 <InputLabel>Sort By</InputLabel>
                                 <Select
@@ -701,7 +865,7 @@ function Articles() {
                             </FormControl>
                         </Grid>
 
-                        <Grid item xs={12} md={3}>
+                        <Grid item xs={12} md={2}>
                             <ToggleButtonGroup
                                 value={viewMode}
                                 exclusive
@@ -834,19 +998,32 @@ function Articles() {
                             />
                         </Box>
                     </DialogContent>
-                    <DialogActions sx={{ p: 2.5 }}>
+                    <DialogActions sx={{ p: 2.5, justifyContent: 'space-between' }}>
                         <Button onClick={() => setOpenDialog(false)} size="large">
                             Cancel
                         </Button>
-                        <Button
-                            onClick={handleSubmit}
-                            variant="contained"
-                            size="large"
-                            disabled={!currentArticle.title.trim() || !currentArticle.content.trim()}
-                            sx={{ px: 4 }}
-                        >
-                            {editMode ? 'Update' : 'Publish'}
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            {!editMode && (
+                                <Button
+                                    onClick={() => handleSubmit(true)}
+                                    variant="outlined"
+                                    size="large"
+                                    disabled={!currentArticle.title.trim() || !currentArticle.content.trim()}
+                                    sx={{ px: 3 }}
+                                >
+                                    Save as Draft
+                                </Button>
+                            )}
+                            <Button
+                                onClick={() => handleSubmit(false)}
+                                variant="contained"
+                                size="large"
+                                disabled={!currentArticle.title.trim() || !currentArticle.content.trim()}
+                                sx={{ px: 4 }}
+                            >
+                                {editMode ? 'Update' : 'Publish'}
+                            </Button>
+                        </Box>
                     </DialogActions>
                 </Dialog>
 
@@ -936,6 +1113,146 @@ function Articles() {
                             startIcon={<Report />}
                         >
                             Submit Report
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Share Dialog */}
+                <Dialog
+                    open={shareDialog}
+                    onClose={() => {
+                        setShareDialog(false);
+                        setSharingArticle(null);
+                    }}
+                    maxWidth="xs"
+                    fullWidth
+                >
+                    <DialogTitle sx={{ pb: 1 }}>
+                        <Typography variant="h6" fontWeight={600}>
+                            Share Article
+                        </Typography>
+                        {sharingArticle && (
+                            <Typography variant="body2" color="textSecondary" noWrap>
+                                {sharingArticle.title}
+                            </Typography>
+                        )}
+                    </DialogTitle>
+                    <DialogContent>
+                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                            <Grid item xs={4}>
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    onClick={() => handleSharePlatform('twitter')}
+                                    sx={{
+                                        flexDirection: 'column',
+                                        py: 2,
+                                        borderColor: '#1DA1F2',
+                                        color: '#1DA1F2',
+                                        '&:hover': { borderColor: '#1DA1F2', bgcolor: 'rgba(29, 161, 242, 0.1)' }
+                                    }}
+                                >
+                                    <Twitter sx={{ fontSize: 32, mb: 0.5 }} />
+                                    <Typography variant="caption">Twitter</Typography>
+                                </Button>
+                            </Grid>
+                            <Grid item xs={4}>
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    onClick={() => handleSharePlatform('facebook')}
+                                    sx={{
+                                        flexDirection: 'column',
+                                        py: 2,
+                                        borderColor: '#4267B2',
+                                        color: '#4267B2',
+                                        '&:hover': { borderColor: '#4267B2', bgcolor: 'rgba(66, 103, 178, 0.1)' }
+                                    }}
+                                >
+                                    <Facebook sx={{ fontSize: 32, mb: 0.5 }} />
+                                    <Typography variant="caption">Facebook</Typography>
+                                </Button>
+                            </Grid>
+                            <Grid item xs={4}>
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    onClick={() => handleSharePlatform('linkedin')}
+                                    sx={{
+                                        flexDirection: 'column',
+                                        py: 2,
+                                        borderColor: '#0077B5',
+                                        color: '#0077B5',
+                                        '&:hover': { borderColor: '#0077B5', bgcolor: 'rgba(0, 119, 181, 0.1)' }
+                                    }}
+                                >
+                                    <LinkedIn sx={{ fontSize: 32, mb: 0.5 }} />
+                                    <Typography variant="caption">LinkedIn</Typography>
+                                </Button>
+                            </Grid>
+                            <Grid item xs={4}>
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    onClick={() => handleSharePlatform('whatsapp')}
+                                    sx={{
+                                        flexDirection: 'column',
+                                        py: 2,
+                                        borderColor: '#25D366',
+                                        color: '#25D366',
+                                        '&:hover': { borderColor: '#25D366', bgcolor: 'rgba(37, 211, 102, 0.1)' }
+                                    }}
+                                >
+                                    <WhatsApp sx={{ fontSize: 32, mb: 0.5 }} />
+                                    <Typography variant="caption">WhatsApp</Typography>
+                                </Button>
+                            </Grid>
+                            <Grid item xs={4}>
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    onClick={() => handleSharePlatform('email')}
+                                    sx={{
+                                        flexDirection: 'column',
+                                        py: 2,
+                                        borderColor: theme.palette.grey[600],
+                                        color: theme.palette.grey[600],
+                                        '&:hover': { borderColor: theme.palette.grey[600], bgcolor: 'rgba(0, 0, 0, 0.05)' }
+                                    }}
+                                >
+                                    <Email sx={{ fontSize: 32, mb: 0.5 }} />
+                                    <Typography variant="caption">Email</Typography>
+                                </Button>
+                            </Grid>
+                            <Grid item xs={4}>
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    onClick={() => handleSharePlatform('copy')}
+                                    sx={{
+                                        flexDirection: 'column',
+                                        py: 2,
+                                        borderColor: theme.palette.primary.main,
+                                        color: theme.palette.primary.main,
+                                        '&:hover': { borderColor: theme.palette.primary.main, bgcolor: 'rgba(25, 118, 210, 0.1)' }
+                                    }}
+                                >
+                                    <ContentCopy sx={{ fontSize: 32, mb: 0.5 }} />
+                                    <Typography variant="caption">Copy Link</Typography>
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </DialogContent>
+                    <DialogActions sx={{ p: 2 }}>
+                        <Button
+                            onClick={() => {
+                                setShareDialog(false);
+                                setSharingArticle(null);
+                            }}
+                            fullWidth
+                            variant="text"
+                        >
+                            Cancel
                         </Button>
                     </DialogActions>
                 </Dialog>

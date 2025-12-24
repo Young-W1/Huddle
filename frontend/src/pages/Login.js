@@ -92,7 +92,10 @@ function Login() {
                         >
                             {loading ? 'Signing In...' : 'Sign In'}
                         </Button>
-                        <Box textAlign="center">
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Link to="/forgot-password" style={{ textDecoration: 'none', color: '#666', fontSize: '0.875rem' }}>
+                                Forgot Password?
+                            </Link>
                             <Link to="/signup" style={{ textDecoration: 'none', color: '#1976d2' }}>
                                 Don't have an account? Sign Up
                             </Link>

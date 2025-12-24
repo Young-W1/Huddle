@@ -3,8 +3,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import axios from 'axios';
 
-// Import pages
+// Import components
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
+
+// Import pages
 import Dashboard from './pages/Dashboard';
 import Articles from './pages/Articles';
 import Analytics from './pages/Analytics';
@@ -15,6 +18,8 @@ import Notifications from './pages/Notifications';
 import Search from './pages/Search';
 import ArticleDetail from './pages/ArticleDetail';
 import Reports from './pages/Reports';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 const theme = createTheme({
     palette: {
@@ -187,37 +192,41 @@ function App() {
     }, []);
 
     return (
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Router>
-                <Routes>
-                    {/* Public routes */}
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
+        <ErrorBoundary>
+            <ThemeProvider theme={theme}>
+                <CssBaseline />
+                <Router>
+                    <Routes>
+                        {/* Public routes */}
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/signup" element={<Signup />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
 
-                    {/* Protected routes with Layout */}
-                    <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/articles" element={<Articles />} />
-                        <Route path="/articles/:articleId" element={<ArticleDetail />} />
-                        <Route path="/analytics" element={<Analytics />} />
+                        {/* Protected routes with Layout */}
+                        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                            <Route path="/" element={<Dashboard />} />
+                            <Route path="/articles" element={<Articles />} />
+                            <Route path="/articles/:articleId" element={<ArticleDetail />} />
+                            <Route path="/analytics" element={<Analytics />} />
 
-                        {/* Profile routes */}
-                        <Route path="/profile" element={<CurrentUserProfile />} />
-                        <Route path="/profile/me" element={<CurrentUserProfile />} />
-                        {/*<Route path="/profile/:userId" element={<Profile />} />*/}
-                        <Route path="/profile/:username" element={<Profile />} />
+                            {/* Profile routes */}
+                            <Route path="/profile" element={<CurrentUserProfile />} />
+                            <Route path="/profile/me" element={<CurrentUserProfile />} />
+                            {/*<Route path="/profile/:userId" element={<Profile />} />*/}
+                            <Route path="/profile/:username" element={<Profile />} />
 
-                        <Route path="/notifications" element={<Notifications />} />
-                        <Route path="/search" element={<Search />} />
-                        <Route path="/reports" element={<Reports />} />
-                    </Route>
+                            <Route path="/notifications" element={<Notifications />} />
+                            <Route path="/search" element={<Search />} />
+                            <Route path="/reports" element={<Reports />} />
+                        </Route>
 
-                    {/* Default redirect */}
-                    <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
-            </Router>
-        </ThemeProvider>
+                        {/* Default redirect */}
+                        <Route path="*" element={<Navigate to="/" />} />
+                    </Routes>
+                </Router>
+            </ThemeProvider>
+        </ErrorBoundary>
     );
 }
 

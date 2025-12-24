@@ -354,12 +354,13 @@ function Profile() {
                     ...prev,
                     ...editData
                 }));
-                setEditDialog(false);
                 alert('Profile updated successfully');
             }
         } catch (err) {
             console.error('Failed to update profile:', err);
             alert('Failed to update profile');
+        } finally {
+            setEditDialog(false);
         }
     };
 

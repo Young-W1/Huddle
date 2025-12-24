@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -22,14 +23,22 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtFilter;
 
+    @Autowired
+    private CorsConfigurationSource corsConfigurationSource;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public authentication endpoints
                         .requestMatchers("/", "/huddle/signup", "/huddle/login", "/huddle/logout")
+                        .permitAll()
+
+                        // Password reset endpoints (public)
+                        .requestMatchers("/huddle/password/**")
                         .permitAll()
 
                         // Actuator health endpoint for Render health checks
@@ -63,6 +72,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/huddle/articles/update/{id}")
                         .authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/huddle/articles/delete/{id}")
+                        .authenticated()
+                        .requestMatchers(HttpMethod.GET, "/huddle/articles/my-articles", "/huddle/articles/my-drafts")
                         .authenticated()
 
                         // Comment management endpoints - require authentication
@@ -101,6 +112,22 @@ public class SecurityConfig {
                                 "/huddle/search-users",
                                 "/huddle/notifications/search")
                         .authenticated()  // Require authentication for user/notification search and global search
+
+                        // Password reset endpoints - public access
+                        .requestMatchers("/huddle/password/forgot", "/huddle/password/reset", "/huddle/password/validate-token")
+                        .permitAll()
+
+                        // Article share links - public access (for sharing)
+                        .requestMatchers(HttpMethod.GET, "/huddle/articles/{articleId}/share-links", "/huddle/articles/{articleId}/share-count")
+                        .permitAll()
+
+                        // Record article share - require authentication
+                        .requestMatchers(HttpMethod.POST, "/huddle/articles/{articleId}/share")
+                        .authenticated()
+
+                        // Bookmark endpoints - require authentication
+                        .requestMatchers("/huddle/bookmarks/**")
+                        .authenticated()
 
                         // Report management endpoints
                         .requestMatchers(HttpMethod.POST, "/huddle/reports")

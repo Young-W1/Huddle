@@ -99,9 +99,11 @@ public class ArticleController {
             @ApiResponse(responseCode = "404", description = "Article not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<?> getArticleById(@PathVariable UUID id) {
+    public ResponseEntity<?> getArticleById(@PathVariable UUID id, Authentication authentication) {
         try {
-            ArticleDataDto article = articleService.getArticleById(id);
+            // Get current username if authenticated (for draft access control)
+            String currentUsername = authentication != null ? authentication.getName() : null;
+            ArticleDataDto article = articleService.getArticleById(id, currentUsername);
 
             ArticleResponse<ArticleDataDto> response = ArticleResponse.<ArticleDataDto>builder()
                     .success(true)
@@ -114,7 +116,7 @@ public class ArticleController {
             log.error("Error retrieving article by ID: ", e);
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
                     .success(false)
-                    .message("Article not found: " + e.getMessage())
+                    .message("Article not found")
                     .data(null)
                     .build();
             return ResponseEntity.status(404).body(errorResponse);
@@ -245,6 +247,36 @@ public class ArticleController {
             ArticleResponse<Object> errorResponse = ArticleResponse.builder()
                     .success(false)
                     .message("Failed to retrieve articles: " + e.getMessage())
+                    .data(null)
+                    .build();
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    @GetMapping("/my-drafts")
+    @Operation(summary = "Get my draft articles", description = "Get all draft articles created by the authenticated user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved draft articles"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<?> getMyDrafts(Pageable pageable, Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            Page<ArticleDataDto> drafts = articleService.getDraftsByAuthor(username, pageable);
+
+            ArticleResponse<Page<ArticleDataDto>> response = ArticleResponse.<Page<ArticleDataDto>>builder()
+                    .success(true)
+                    .message("Draft articles retrieved successfully")
+                    .data(drafts)
+                    .build();
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error retrieving draft articles: ", e);
+            ArticleResponse<Object> errorResponse = ArticleResponse.builder()
+                    .success(false)
+                    .message("Failed to retrieve draft articles: " + e.getMessage())
                     .data(null)
                     .build();
             return ResponseEntity.status(500).body(errorResponse);

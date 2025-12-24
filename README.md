@@ -430,7 +430,158 @@ Common reasons for reporting:
 - Auth Required: Yes (Admin authority required)
 - Description: Get report-related statistics
 
-### Admin Access
+---
+
+### Bookmarks
+
+#### Add Bookmark
+- **URL:** `/huddle/bookmarks/{articleId}`
+- **Method:** `POST`
+- **Auth Required:** Yes
+- **Description:** Bookmark an article for later reading
+- **Success Response:**
+  ```json
+  {
+    "success": true,
+    "message": "Article bookmarked successfully",
+    "data": {
+      "articleId": "uuid",
+      "bookmarked": true
+    }
+  }
+  ```
+
+#### Remove Bookmark
+- **URL:** `/huddle/bookmarks/{articleId}`
+- **Method:** `DELETE`
+- **Auth Required:** Yes
+- **Description:** Remove a bookmark from an article
+
+#### Check Bookmark Status
+- **URL:** `/huddle/bookmarks/{articleId}/status`
+- **Method:** `GET`
+- **Auth Required:** Yes
+- **Description:** Check if an article is bookmarked by the current user
+
+#### Get User Bookmarks
+- **URL:** `/huddle/bookmarks`
+- **Method:** `GET`
+- **Auth Required:** Yes
+- **Query Parameters:**
+  - `page` (int, optional): Page number (default: 0)
+  - `size` (int, optional): Page size (default: 10)
+- **Description:** Get all bookmarked articles for the current user
+
+#### Get Bookmark Count
+- **URL:** `/huddle/bookmarks/count`
+- **Method:** `GET`
+- **Auth Required:** Yes
+- **Description:** Get total number of bookmarks for the current user
+
+---
+
+### Password Reset
+
+#### Request Password Reset
+- **URL:** `/huddle/password/forgot`
+- **Method:** `POST`
+- **Auth Required:** No
+- **Request Body:**
+  ```json
+  {
+    "email": "user@example.com"
+  }
+  ```
+- **Description:** Initiate password reset process by providing email
+
+#### Validate Reset Token
+- **URL:** `/huddle/password/validate-token`
+- **Method:** `GET`
+- **Auth Required:** No
+- **Query Parameters:**
+  - `token`: Password reset token
+- **Description:** Check if a password reset token is valid
+
+#### Reset Password
+- **URL:** `/huddle/password/reset`
+- **Method:** `POST`
+- **Auth Required:** No
+- **Request Body:**
+  ```json
+  {
+    "token": "reset-token-uuid",
+    "newPassword": "newSecurePassword123",
+    "confirmPassword": "newSecurePassword123"
+  }
+  ```
+- **Description:** Reset password using the token received via email
+
+---
+
+### Article Sharing
+
+#### Get Share Links
+- **URL:** `/huddle/articles/{articleId}/share-links`
+- **Method:** `GET`
+- **Auth Required:** No
+- **Description:** Generate share links for various social media platforms
+- **Success Response:**
+  ```json
+  {
+    "success": true,
+    "message": "Share links generated successfully",
+    "data": {
+      "twitter": "https://twitter.com/intent/tweet?...",
+      "facebook": "https://www.facebook.com/sharer/...",
+      "linkedin": "https://www.linkedin.com/sharing/...",
+      "email": "mailto:?subject=...",
+      "directLink": "https://yourapp.com/articles/uuid"
+    }
+  }
+  ```
+
+#### Record Share
+- **URL:** `/huddle/articles/{articleId}/share`
+- **Method:** `POST`
+- **Auth Required:** Yes
+- **Query Parameters:**
+  - `platform`: Share platform (TWITTER, FACEBOOK, LINKEDIN, EMAIL, COPY_LINK, OTHER)
+- **Description:** Record when a user shares an article
+
+#### Get Share Count
+- **URL:** `/huddle/articles/{articleId}/share-count`
+- **Method:** `GET`
+- **Auth Required:** No
+- **Description:** Get total share count for an article
+- **Success Response:**
+  ```json
+  {
+    "success": true,
+    "message": "Share count retrieved successfully",
+    "data": {
+      "totalShares": 25,
+      "byPlatform": {
+        "TWITTER": 10,
+        "FACEBOOK": 8,
+        "LINKEDIN": 5,
+        "COPY_LINK": 2
+      }
+    }
+  }
+  ```
+
+---
+
+### Article Drafts
+
+Articles now support a `status` field with the following values:
+- `DRAFT` - Article saved but not published
+- `PUBLISHED` - Article visible to all users
+- `ARCHIVED` - Article hidden from public view
+
+When creating or updating articles, you can set the status to save as draft or publish immediately.
+
+---
 The following endpoints require admin privileges (users with ADMIN authority):
 
 #### Reports Management:
@@ -444,3 +595,191 @@ The following endpoints require admin privileges (users with ADMIN authority):
 - GET /huddle/analytics/reports - Report statistics
 
 Note: Admin users are identified by having the ADMIN authority in their security context.
+
+---
+
+## Security Features
+
+### Authentication & Authorization
+- **JWT Tokens**: Secure JSON Web Token authentication
+- **Role-based Access Control**: User and Admin roles with different permissions
+- **Password Encryption**: BCrypt password hashing
+- **Token Expiration**: Configurable JWT expiration (default: 24 hours)
+
+### Security Headers
+All responses include security headers:
+- `X-Frame-Options: DENY` - Prevents clickjacking attacks
+- `X-XSS-Protection: 1; mode=block` - XSS protection
+- `X-Content-Type-Options: nosniff` - Prevents MIME sniffing
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Content-Security-Policy` - Controls resource loading
+- `Strict-Transport-Security` - Forces HTTPS connections
+
+### Rate Limiting
+API requests are rate-limited to prevent abuse:
+- **60 requests per minute** per IP address
+- **1000 requests per hour** per IP address
+- Rate limit headers included in responses:
+  - `X-Rate-Limit-Remaining`: Remaining requests
+
+### Input Sanitization
+- HTML tag stripping
+- XSS prevention through character escaping
+- SQL injection pattern detection
+- File name sanitization
+
+### Error Handling
+- Stack traces are **never** exposed to users
+- All errors return user-friendly messages
+- Errors are logged server-side for debugging
+
+---
+
+## Observability & Monitoring
+
+### Health Checks
+Access health information at:
+```
+GET /actuator/health
+```
+
+Response includes:
+- Application status
+- Database connectivity
+- Liveness and readiness probes
+
+### Metrics
+Prometheus-compatible metrics available at:
+```
+GET /actuator/prometheus
+```
+
+Custom metrics tracked:
+- `huddle.articles.created` - Articles created
+- `huddle.articles.viewed` - Article views
+- `huddle.users.registered` - User registrations
+- `huddle.users.login` - Login attempts (success/failed)
+- `huddle.comments.created` - Comments created
+- `huddle.reports.created` - Reports filed
+- `huddle.api.errors` - API errors
+- `huddle.rate.limit.exceeded` - Rate limit violations
+
+### Logging
+- **Production**: WARN level for third-party libraries, INFO for application
+- **Development**: INFO level with SQL query logging
+- Pattern: `%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n`
+
+---
+
+## Pagination
+
+All list endpoints support pagination with these query parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | int | 0 | Page number (0-indexed) |
+| `size` | int | 10 | Items per page (max: 100) |
+| `sort` | string | varies | Sort field and direction (e.g., `createdAt,desc`) |
+
+### Response Format
+Paginated responses include metadata:
+```json
+{
+  "success": true,
+  "message": "Items retrieved successfully",
+  "content": [...],
+  "pagination": {
+    "page": 0,
+    "size": 10,
+    "totalElements": 100,
+    "totalPages": 10,
+    "first": true,
+    "last": false,
+    "hasNext": true,
+    "hasPrevious": false
+  }
+}
+```
+
+---
+
+## Deployment
+
+### Render Deployment
+
+The project includes a `render.yaml` for one-click deployment to Render:
+
+1. **Connect GitHub Repository** to Render
+2. **Create PostgreSQL Database** on Render
+3. **Set Environment Variables**:
+   - `DATABASE_URL`: PostgreSQL connection string
+   - `JWT_SECRET`: Your secret key (min 64 characters)
+   - `CORS_ORIGINS`: Frontend URL
+4. **Deploy** using the render.yaml blueprint
+
+### Environment Variables
+
+#### Backend (Required)
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection URL | - |
+| `JWT_SECRET` | Secret key for JWT signing | - |
+| `JWT_EXPIRATION` | Token expiration in ms | 86400000 |
+| `CORS_ORIGINS` | Allowed origins (comma-separated) | localhost |
+| `PORT` | Server port | 8080 |
+
+#### Backend (Optional)
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `RATE_LIMIT_RPM` | Requests per minute | 60 |
+| `RATE_LIMIT_RPH` | Requests per hour | 1000 |
+| `SWAGGER_ENABLED` | Enable Swagger UI | true |
+| `UPLOAD_DIR` | File upload directory | uploads |
+
+#### Frontend
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `REACT_APP_API_URL` | Backend API URL | http://localhost:6061 |
+| `REACT_APP_DEFAULT_PAGE_SIZE` | Default pagination size | 10 |
+
+### Docker Deployment (Coming Soon)
+Docker support will be added in future releases.
+
+---
+
+## API Documentation
+
+### Swagger UI
+Once running, access the interactive API documentation:
+
+- **Swagger UI**: `http://localhost:6061/swagger-ui.html`
+- **OpenAPI JSON**: `http://localhost:6061/v3/api-docs`
+
+The Swagger UI includes:
+- All endpoint documentation
+- Request/response schemas
+- Authentication support (click Authorize, enter `Bearer {token}`)
+- Try-it-out functionality
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## Support
+
+For support, please open an issue in the GitHub repository or contact the maintainers.
+

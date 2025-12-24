@@ -4,6 +4,7 @@ import com.capstone.huddle.articles.dto.ArticleFilterDto;
 import com.capstone.huddle.articles.dto.request.ArticleDataDto;
 import com.capstone.huddle.articles.dto.request.ArticleRequest;
 import com.capstone.huddle.articles.model.ArticleEntity;
+import com.capstone.huddle.articles.model.ArticleStatus;
 import com.capstone.huddle.articles.repository.ArticleRepository;
 import com.capstone.huddle.common.specification.GenericSpecificationBuilder;
 import com.capstone.huddle.users.model.UserEntity;
@@ -35,24 +36,32 @@ public class ArticleService {
         UserEntity author = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
+        // Default to PUBLISHED if status not specified
+        ArticleStatus status = articleRequest.getStatus() != null
+                ? articleRequest.getStatus()
+                : ArticleStatus.PUBLISHED;
+
         ArticleEntity article = ArticleEntity.builder()
                 .title(articleRequest.getTitle())
                 .content(articleRequest.getContent())
                 .author(author)
+                .status(status)
                 .build();
 
         ArticleEntity savedArticle = articleRepository.save(article);
-        log.info("Article created successfully with id: {} by user: {}", savedArticle.getId(), username);
+        log.info("Article created successfully with id: {} status: {} by user: {}",
+                savedArticle.getId(), status, username);
 
         return mapToDataResponse(savedArticle);
     }
 
     @Transactional(readOnly = true)
     public Page<ArticleDataDto> getAllArticles(Pageable pageable) {
-        log.info("Retrieving all articles with pagination - page: {}, size: {}",
+        log.info("Retrieving all published articles with pagination - page: {}, size: {}",
                 pageable.getPageNumber(), pageable.getPageSize());
 
-        Page<ArticleEntity> articlesPage = articleRepository.findAll(pageable);
+        // Only return published articles, not drafts
+        Page<ArticleEntity> articlesPage = articleRepository.findPublishedArticles(pageable);
         return articlesPage.map(this::mapToDataResponse);
     }
 
@@ -61,6 +70,22 @@ public class ArticleService {
         log.info("Retrieving article by ID: {}", id);
         ArticleEntity article = articleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Article not found with ID: " + id));
+        return mapToDataResponse(article);
+    }
+
+    @Transactional(readOnly = true)
+    public ArticleDataDto getArticleById(UUID id, String currentUsername) {
+        log.info("Retrieving article by ID: {} for user: {}", id, currentUsername);
+        ArticleEntity article = articleRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Article not found with ID: " + id));
+
+        // If the article is a draft, only the author will be able to see it
+        if (article.getStatus() == ArticleStatus.DRAFT) {
+            if (currentUsername == null || !article.getAuthor().getUsername().equals(currentUsername)) {
+                throw new RuntimeException("Article not found with ID: " + id);
+            }
+        }
+
         return mapToDataResponse(article);
     }
 
@@ -102,9 +127,17 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public Page<ArticleDataDto> getArticlesByAuthor(String username, Pageable pageable) {
-        log.info("Retrieving articles by author: {}", username);
-        Page<ArticleEntity> articlesPage = articleRepository.findByAuthorUsername(username, pageable);
+        log.info("Retrieving published articles by author: {}", username);
+        // Only return published articles for the author - drafts are shown separately
+        Page<ArticleEntity> articlesPage = articleRepository.findByAuthorUsernameAndStatus(username, ArticleStatus.PUBLISHED, pageable);
         return articlesPage.map(this::mapToDataResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ArticleDataDto> getDraftsByAuthor(String username, Pageable pageable) {
+        log.info("Retrieving draft articles by author: {}", username);
+        Page<ArticleEntity> draftsPage = articleRepository.findByAuthorUsernameAndStatus(username, ArticleStatus.DRAFT, pageable);
+        return draftsPage.map(this::mapToDataResponse);
     }
 
     private ArticleDataDto mapToDataResponse(ArticleEntity article) {
@@ -125,6 +158,11 @@ public class ArticleService {
     public Page<ArticleDataDto> searchArticles(ArticleFilterDto filter, Pageable pageable) {
         GenericSpecificationBuilder<ArticleEntity> builder = new GenericSpecificationBuilder<>();
         Specification<ArticleEntity> spec = Specification.where(null);
+
+        // Always filter to only show published articles (not drafts)
+        spec = spec.and((root, query, cb) ->
+                cb.equal(root.get("status"), ArticleStatus.PUBLISHED)
+        );
 
         if (filter.getSearchTerm() != null) {
             spec = spec.and(builder.withTextSearch(

@@ -31,7 +31,8 @@ import {
     Settings as SettingsIcon,
     Report as ReportIcon,
     AdminPanelSettings as AdminIcon,
-    Analytics as AnalyticsIcon
+    Analytics as AnalyticsIcon,
+    Bookmark as BookmarkIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -70,7 +71,7 @@ function Layout() {
     const menuItems = [
         { text: 'Home', path: '/', icon: <DashboardIcon /> },
         { text: 'Articles', path: '/articles', icon: <ArticleIcon /> },
-        // { text: 'Profile', path: '/profile/me', icon: <PersonIcon /> },
+        { text: 'Bookmarks', path: '/articles?tab=bookmarks', icon: <BookmarkIcon /> },
         { text: 'Profile', path: `/profile/${username}`, icon: <PersonIcon /> },
         { text: 'Search', path: '/search', icon: <SearchIcon /> },
         { text: 'Notifications', path: '/notifications', icon: <NotificationsIcon /> },

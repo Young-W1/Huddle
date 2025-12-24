@@ -14,7 +14,9 @@ import java.util.UUID;
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, UUID>, JpaSpecificationExecutor<UserEntity> {
 
-    Optional <UserEntity> findByUsername(String username);
+    Optional<UserEntity> findByUsername(String username);
+
+    Optional<UserEntity> findByEmail(String email);
 
     @Query("SELECT COUNT(u) FROM UserEntity u WHERE u.createdAt >= :date")
     long countUsersCreatedAfter(@Param("date") LocalDateTime date);

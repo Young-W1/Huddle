@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Container,
     Paper,
@@ -29,20 +29,17 @@ import {
     CardContent,
     Grid,
     Skeleton,
-    useTheme,
-    alpha
+    useTheme
 } from '@mui/material';
 import {
     Report as ReportIcon,
     CheckCircle,
     Cancel,
     Pending,
-    Visibility,
     Edit,
     Article,
     Person,
-    CalendarToday,
-    FilterList
+    CalendarToday
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -61,11 +58,7 @@ function Reports() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    useEffect(() => {
-        fetchReports();
-    }, [page, rowsPerPage, statusFilter]);
-
-    const fetchReports = async () => {
+    const fetchReports = useCallback(async () => {
         setLoading(true);
         try {
             const params = {
@@ -90,7 +83,11 @@ function Reports() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, rowsPerPage, statusFilter]);
+
+    useEffect(() => {
+        fetchReports();
+    }, [fetchReports]);
 
     // In Reports.js, update the handleUpdateReport function:
     const handleUpdateReport = async () => {
@@ -109,15 +106,17 @@ function Reports() {
 
             if (response.data.success) {
                 setSuccess('Report updated successfully');
-                setOpenDialog(false);
                 fetchReports();
-                setSelectedReport(null);
-                setNewStatus('');
-                setAdminNotes('');
             }
         } catch (err) {
             console.error('Failed to update report:', err);
             setError(err.response?.data?.message || 'Failed to update report');
+        } finally {
+            // Always close dialog and reset state
+            setOpenDialog(false);
+            setSelectedReport(null);
+            setNewStatus('');
+            setAdminNotes('');
         }
     };
 
@@ -186,6 +185,7 @@ function Reports() {
                     <FormControl size="small" sx={{ minWidth: 150, bgcolor: 'white', borderRadius: 1 }}>
                         <InputLabel>Status Filter</InputLabel>
                         <Select
+                            variant="outlined"
                             value={statusFilter}
                             onChange={(e) => {
                                 setStatusFilter(e.target.value);
@@ -380,6 +380,7 @@ function Reports() {
                                 <FormControl fullWidth>
                                     <InputLabel>Status</InputLabel>
                                     <Select
+                                        variant="outlined"
                                         value={newStatus}
                                         onChange={(e) => setNewStatus(e.target.value)}
                                         label="Status"

@@ -4,22 +4,26 @@ services:
     name: huddle-api
     runtime: java
     plan: free
-    buildCommand: ./mvnw clean package -DskipTests
-    startCommand: java -jar target/huddle.jar
+    buildCommand: ./mvnw clean package -DskipTests -Pproduction
+    startCommand: java -Dserver.port=$PORT -Dspring.profiles.active=production -jar target/huddle.jar
     healthCheckPath: /actuator/health
     envVars:
       - key: JAVA_TOOL_OPTIONS
-        value: -Xmx512m
+        value: -Xmx512m -XX:+UseContainerSupport
       - key: SPRING_PROFILES_ACTIVE
         value: production
       - key: DATABASE_URL
         sync: false
-      - key: PGUSER
-        sync: false
-      - key: PGPASSWORD
-        sync: false
       - key: JWT_SECRET
         generateValue: true
+      - key: CORS_ORIGINS
+        value: https://huddle-frontend.onrender.com
+      - key: RATE_LIMIT_RPM
+        value: 100
+      - key: RATE_LIMIT_RPH
+        value: 2000
+      - key: SWAGGER_ENABLED
+        value: false
 
   # Frontend React App
   - type: web
@@ -27,7 +31,28 @@ services:
     runtime: static
     buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: frontend/build
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: REACT_APP_API_URL
-        sync: false
+        value: https://huddle-api.onrender.com
+      - key: NODE_VERSION
+        value: 18
 
+databases:
+  - name: huddle-db
+    databaseName: huddle
+    user: huddle_user
+    plan: free
