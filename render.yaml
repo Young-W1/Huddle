@@ -2,14 +2,11 @@ services:
   # Backend API
   - type: web
     name: huddle-api
-    runtime: java
+    runtime: docker
     plan: free
-    buildCommand: ./mvnw clean package -DskipTests -Pproduction
-    startCommand: java -Dserver.port=$PORT -Dspring.profiles.active=production -jar target/huddle.jar
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /actuator/health
     envVars:
-      - key: JAVA_TOOL_OPTIONS
-        value: -Xmx512m -XX:+UseContainerSupport
       - key: SPRING_PROFILES_ACTIVE
         value: production
       - key: DATABASE_URL
@@ -23,6 +20,8 @@ services:
       - key: RATE_LIMIT_RPH
         value: 2000
       - key: SWAGGER_ENABLED
+        value: false
+      - key: DEV_MODE
         value: false
 
   # Frontend React App
