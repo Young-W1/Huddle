@@ -9,20 +9,28 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: production
-      - key: DATABASE_URL
+      - key: DATABASE_HOST
+        sync: false
+      - key: DATABASE_PORT
+        value: "5432"
+      - key: DATABASE_NAME
+        sync: false
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
         sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS
         value: https://huddle-frontend.onrender.com
       - key: RATE_LIMIT_RPM
-        value: 100
+        value: "100"
       - key: RATE_LIMIT_RPH
-        value: 2000
+        value: "2000"
       - key: SWAGGER_ENABLED
-        value: false
+        value: "false"
       - key: DEV_MODE
-        value: false
+        value: "false"
 
   # Frontend React App
   - type: web
