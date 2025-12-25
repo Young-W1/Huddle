@@ -22,7 +22,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS
-        value: https://huddle-frontend.onrender.com
+        value: https://huddle-frontend-waul.onrender.com
       - key: RATE_LIMIT_RPM
         value: "100"
       - key: RATE_LIMIT_RPH
@@ -32,7 +32,7 @@ services:
       - key: DEV_MODE
         value: "false"
       - key: APP_BASE_URL
-        value: https://huddle-frontend.onrender.com
+        value: https://huddle-frontend-waul.onrender.com
       - key: ADMIN_EMAIL
         value: youngwynn234@gmail.com
 
