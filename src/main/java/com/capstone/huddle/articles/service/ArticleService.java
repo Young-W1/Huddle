@@ -6,7 +6,13 @@ import com.capstone.huddle.articles.dto.request.ArticleRequest;
 import com.capstone.huddle.articles.model.ArticleEntity;
 import com.capstone.huddle.articles.model.ArticleStatus;
 import com.capstone.huddle.articles.repository.ArticleRepository;
+import com.capstone.huddle.articles.repository.ArticleRatingRepository;
+import com.capstone.huddle.articles.repository.ArticleShareRepository;
+import com.capstone.huddle.articles.repository.BookmarkRepository;
+import com.capstone.huddle.comments.repository.CommentsRepository;
+import com.capstone.huddle.comments.repository.CommentVoteRepository;
 import com.capstone.huddle.common.specification.GenericSpecificationBuilder;
+import com.capstone.huddle.report.repository.ReportRepository;
 import com.capstone.huddle.users.model.UserEntity;
 import com.capstone.huddle.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +34,12 @@ public class ArticleService {
 
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
+    private final ReportRepository reportRepository;
+    private final CommentsRepository commentsRepository;
+    private final CommentVoteRepository commentVoteRepository;
+    private final ArticleRatingRepository articleRatingRepository;
+    private final BookmarkRepository bookmarkRepository;
+    private final ArticleShareRepository articleShareRepository;
 
     @Transactional
     public ArticleDataDto createArticle(ArticleRequest articleRequest, String username) {
@@ -121,6 +133,31 @@ public class ArticleService {
             throw new AccessDeniedException("You are not authorized to delete this article");
         }
 
+        // Delete all related data first to avoid foreign key constraints
+        log.info("Deleting related data for article ID: {}", id);
+
+        // Delete reports related to this article
+        reportRepository.deleteByReportedArticle(article);
+
+        // Delete comment votes for comments on this article
+        var comments = commentsRepository.findByArticleId(id);
+        for (var comment : comments) {
+            commentVoteRepository.deleteByComment(comment);
+        }
+
+        // Delete comments on this article
+        commentsRepository.deleteAll(comments);
+
+        // Delete article ratings
+        articleRatingRepository.deleteByArticle(article);
+
+        // Delete bookmarks
+        bookmarkRepository.deleteByArticle(article);
+
+        // Delete shares
+        articleShareRepository.deleteByArticle(article);
+
+        // Finally delete the article
         articleRepository.delete(article);
         log.info("Article deleted successfully with ID: {} by user: {}", id, username);
     }

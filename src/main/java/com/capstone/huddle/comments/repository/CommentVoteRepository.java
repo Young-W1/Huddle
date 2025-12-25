@@ -18,6 +18,6 @@ public interface CommentVoteRepository extends JpaRepository<CommentVoteEntity, 
     Optional<CommentVoteEntity> findByCommentAndUser(CommentsEntity comment, UserEntity user);
     List<CommentVoteEntity> findByComment(CommentsEntity comment);
     Integer countByCommentAndVoteType(CommentsEntity comment, VoteType voteType);
-
+    void deleteByComment(CommentsEntity comment);
 
 }

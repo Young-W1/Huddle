@@ -28,5 +28,7 @@ public interface BookmarkRepository extends JpaRepository<BookmarkEntity, UUID> 
     long countByUser(UserEntity user);
 
     void deleteByUserAndArticle(UserEntity user, ArticleEntity article);
+
+    void deleteByArticle(ArticleEntity article);
 }
 

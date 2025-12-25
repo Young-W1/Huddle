@@ -22,6 +22,8 @@ public interface ReportRepository extends JpaRepository<ReportEntity, UUID> {
 
     boolean existsByReporterAndReportedArticle(UserEntity reporter, ArticleEntity article);
 
+    void deleteByReportedArticle(ArticleEntity article);
+
     @Query("SELECT r.status, COUNT(r) FROM ReportEntity r GROUP BY r.status")
     List<Object[]> countReportsByStatus();
 

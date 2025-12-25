@@ -30,5 +30,7 @@ public interface ArticleShareRepository extends JpaRepository<ArticleShareEntity
 
     @Query("SELECT s.article.id, COUNT(s) as shareCount FROM ArticleShareEntity s GROUP BY s.article.id ORDER BY shareCount DESC")
     List<Object[]> getMostSharedArticles(Pageable pageable);
+
+    void deleteByArticle(ArticleEntity article);
 }
 

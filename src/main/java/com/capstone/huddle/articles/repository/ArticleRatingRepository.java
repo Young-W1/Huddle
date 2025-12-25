@@ -16,7 +16,6 @@ public interface ArticleRatingRepository extends JpaRepository<ArticleRatingEnti
     Optional<ArticleRatingEntity> findByArticleAndUser(ArticleEntity article, UserEntity user);
     List<ArticleRatingEntity> findByArticle(ArticleEntity article);
     Double findAverageRatingByArticleId(UUID articleId);
-
-
+    void deleteByArticle(ArticleEntity article);
 
 }
