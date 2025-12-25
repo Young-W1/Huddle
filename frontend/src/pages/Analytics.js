@@ -27,7 +27,7 @@ import {
     PersonAdd as PersonAddIcon,
     Star as StarIcon
 } from '@mui/icons-material';
-import axios from 'axios';
+import { analyticsService } from '../services/api';
 
 function Analytics() {
     const [analytics, setAnalytics] = useState(null);
@@ -40,10 +40,7 @@ function Analytics() {
 
     const fetchAnalytics = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:6061/huddle/analytics/all', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await analyticsService.getAllAnalytics();
             if (response.data.success) {
                 setAnalytics(response.data.data);
             }
