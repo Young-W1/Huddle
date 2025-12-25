@@ -9,6 +9,7 @@ import com.capstone.huddle.articles.repository.ArticleRepository;
 import com.capstone.huddle.articles.repository.ArticleRatingRepository;
 import com.capstone.huddle.articles.repository.ArticleShareRepository;
 import com.capstone.huddle.articles.repository.BookmarkRepository;
+import com.capstone.huddle.comments.model.CommentsEntity;
 import com.capstone.huddle.comments.repository.CommentsRepository;
 import com.capstone.huddle.comments.repository.CommentVoteRepository;
 import com.capstone.huddle.common.specification.GenericSpecificationBuilder;

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -25,5 +26,6 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
     void markAllAsReadForUser(UserEntity recipient);
 
     @Modifying
-    void deleteByEntityId(UUID entityId);
+    @Query("DELETE FROM NotificationEntity n WHERE n.entityId = :entityId")
+    void deleteByEntityId(@Param("entityId") UUID entityId);
 }
