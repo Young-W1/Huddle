@@ -68,7 +68,6 @@ function Notifications() {
     const markAllAsRead = async () => {
         try {
             await notificationService.markAllAsRead();
-            });
             fetchNotifications();
             fetchUnreadCount();
         } catch (err) {
@@ -76,7 +75,13 @@ function Notifications() {
         }
     };
 
-    if (loading) return <Container><CircularProgress /></Container>;
+    if (loading) {
+        return (
+            <Container>
+                <CircularProgress />
+            </Container>
+        );
+    }
 
     return (
         <Container maxWidth="md">
@@ -125,3 +130,4 @@ function Notifications() {
 }
 
 export default Notifications;
+
