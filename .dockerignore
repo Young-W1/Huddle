@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+*.iml
+.vscode
+*.swp
+*.swo
+
+# Build outputs
+target/
+!target/*.jar
+
+# Frontend (built separately)
+frontend/node_modules
+frontend/build
+frontend/.env.local
+
+# Logs
+*.log
+logs/
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+src/test/
+
+# Documentation
+*.md
+!README.md
+
+# Uploads (will be mounted as volume in production)
+uploads/
+
