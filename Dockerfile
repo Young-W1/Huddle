@@ -30,10 +30,6 @@ USER appuser
 # Expose port (Render will set PORT env var)
 EXPOSE 8080
 
-# Health check - increased start period for free tier cold starts
-HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8080}/actuator/health || exit 1
-
 # Run the application with optimized JVM settings for free tier
-ENTRYPOINT ["java", "-Xmx384m", "-Xms128m", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Dspring.main.lazy-initialization=true", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Xmx256m", "-Xms128m", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=50.0", "-Dspring.main.lazy-initialization=true", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
 
