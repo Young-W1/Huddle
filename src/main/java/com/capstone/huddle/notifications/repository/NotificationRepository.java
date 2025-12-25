@@ -24,4 +24,6 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
     @Query("UPDATE NotificationEntity n SET n.isRead = true WHERE n.recipient = :recipient AND n.isRead = false")
     void markAllAsReadForUser(UserEntity recipient);
 
+    @Modifying
+    void deleteByEntityId(UUID entityId);
 }

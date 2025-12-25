@@ -12,6 +12,7 @@ import com.capstone.huddle.articles.repository.BookmarkRepository;
 import com.capstone.huddle.comments.repository.CommentsRepository;
 import com.capstone.huddle.comments.repository.CommentVoteRepository;
 import com.capstone.huddle.common.specification.GenericSpecificationBuilder;
+import com.capstone.huddle.notifications.repository.NotificationRepository;
 import com.capstone.huddle.report.repository.ReportRepository;
 import com.capstone.huddle.users.model.UserEntity;
 import com.capstone.huddle.users.repository.UserRepository;
@@ -40,6 +41,7 @@ public class ArticleService {
     private final ArticleRatingRepository articleRatingRepository;
     private final BookmarkRepository bookmarkRepository;
     private final ArticleShareRepository articleShareRepository;
+    private final NotificationRepository notificationRepository;
 
     @Transactional
     public ArticleDataDto createArticle(ArticleRequest articleRequest, String username) {
@@ -136,13 +138,17 @@ public class ArticleService {
         // Delete all related data first to avoid foreign key constraints
         log.info("Deleting related data for article ID: {}", id);
 
+        // Delete notifications related to this article
+        notificationRepository.deleteByEntityId(id);
+
         // Delete reports related to this article
         reportRepository.deleteByReportedArticle(article);
 
-        // Delete comment votes for comments on this article
+        // Delete comment votes for comments on this article and notifications for comments
         var comments = commentsRepository.findByArticleId(id);
         for (var comment : comments) {
             commentVoteRepository.deleteByComment(comment);
+            notificationRepository.deleteByEntityId(comment.getId());
         }
 
         // Delete comments on this article
