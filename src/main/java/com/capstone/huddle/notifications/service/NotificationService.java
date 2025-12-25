@@ -55,22 +55,32 @@ public class NotificationService {
 
     private void createNotification(UserEntity recipient, UserEntity actor,
                                     NotificationType type, String message, UUID entityId) {
+        // Validate inputs
+        if (recipient == null || actor == null) {
+            log.warn("Cannot create notification: recipient or actor is null");
+            return;
+        }
+
         // Don't notify if actor and recipient are the same
         if (recipient.getId().equals(actor.getId())) {
             return;
         }
 
-        NotificationEntity notification = NotificationEntity.builder()
-                .recipient(recipient)
-                .actor(actor)
-                .type(type)
-                .message(message)
-                .entityId(entityId)
-                .isRead(false)
-                .build();
+        try {
+            NotificationEntity notification = NotificationEntity.builder()
+                    .recipient(recipient)
+                    .actor(actor)
+                    .type(type)
+                    .message(message)
+                    .entityId(entityId)
+                    .isRead(false)
+                    .build();
 
-        notificationRepository.save(notification);
-        log.info("Notification created for user {} of type {}", recipient.getUsername(), type);
+            notificationRepository.save(notification);
+            log.info("Notification created for user {} of type {}", recipient.getUsername(), type);
+        } catch (Exception e) {
+            log.error("Failed to create notification for user {}: {}", recipient.getUsername(), e.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)
