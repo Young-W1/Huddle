@@ -144,15 +144,11 @@ public class ArticleService {
         // Delete reports related to this article
         reportRepository.deleteByReportedArticle(article);
 
-        // Delete comment votes for comments on this article and notifications for comments
-        var comments = commentsRepository.findByArticleId(id);
-        for (var comment : comments) {
-            commentVoteRepository.deleteByComment(comment);
-            notificationRepository.deleteByEntityId(comment.getId());
-        }
+        // Delete comment votes for all comments on this article (batch delete)
+        commentVoteRepository.deleteByArticleId(id);
 
-        // Delete comments on this article
-        commentsRepository.deleteAll(comments);
+        // Delete all comments on this article (batch delete)
+        commentsRepository.deleteByArticleId(id);
 
         // Delete article ratings
         articleRatingRepository.deleteByArticle(article);

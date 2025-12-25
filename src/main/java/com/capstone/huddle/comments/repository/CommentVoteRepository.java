@@ -6,6 +6,8 @@ import com.capstone.huddle.comments.model.CommentsEntity;
 import com.capstone.huddle.users.model.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,5 +24,9 @@ public interface CommentVoteRepository extends JpaRepository<CommentVoteEntity, 
 
     @Modifying
     void deleteByComment(CommentsEntity comment);
+
+    @Modifying
+    @Query("DELETE FROM CommentVoteEntity cv WHERE cv.comment.id IN (SELECT c.id FROM CommentsEntity c WHERE c.article.id = :articleId)")
+    void deleteByArticleId(@Param("articleId") UUID articleId);
 
 }

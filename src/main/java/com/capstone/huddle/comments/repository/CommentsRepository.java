@@ -5,6 +5,7 @@ import com.capstone.huddle.comments.model.CommentsEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -30,4 +31,8 @@ public interface CommentsRepository extends JpaRepository<CommentsEntity, UUID> 
 
     @Query("SELECT COUNT(c) FROM CommentsEntity c WHERE c.article.id = :articleId")
     Long countByArticleId(@Param("articleId") UUID articleId);
+
+    @Modifying
+    @Query("DELETE FROM CommentsEntity c WHERE c.article.id = :articleId")
+    void deleteByArticleId(@Param("articleId") UUID articleId);
 }
