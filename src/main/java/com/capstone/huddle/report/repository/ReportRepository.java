@@ -7,6 +7,7 @@ import com.capstone.huddle.users.model.UserEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -22,6 +23,7 @@ public interface ReportRepository extends JpaRepository<ReportEntity, UUID> {
 
     boolean existsByReporterAndReportedArticle(UserEntity reporter, ArticleEntity article);
 
+    @Modifying
     void deleteByReportedArticle(ArticleEntity article);
 
     @Query("SELECT r.status, COUNT(r) FROM ReportEntity r GROUP BY r.status")

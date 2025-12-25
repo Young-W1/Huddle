@@ -6,6 +6,7 @@ import com.capstone.huddle.users.model.UserEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -31,6 +32,7 @@ public interface ArticleShareRepository extends JpaRepository<ArticleShareEntity
     @Query("SELECT s.article.id, COUNT(s) as shareCount FROM ArticleShareEntity s GROUP BY s.article.id ORDER BY shareCount DESC")
     List<Object[]> getMostSharedArticles(Pageable pageable);
 
+    @Modifying
     void deleteByArticle(ArticleEntity article);
 }
 

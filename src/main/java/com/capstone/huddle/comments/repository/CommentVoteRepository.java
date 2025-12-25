@@ -5,6 +5,7 @@ import com.capstone.huddle.comments.model.CommentVoteEntity;
 import com.capstone.huddle.comments.model.CommentsEntity;
 import com.capstone.huddle.users.model.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,6 +19,8 @@ public interface CommentVoteRepository extends JpaRepository<CommentVoteEntity, 
     Optional<CommentVoteEntity> findByCommentAndUser(CommentsEntity comment, UserEntity user);
     List<CommentVoteEntity> findByComment(CommentsEntity comment);
     Integer countByCommentAndVoteType(CommentsEntity comment, VoteType voteType);
+
+    @Modifying
     void deleteByComment(CommentsEntity comment);
 
 }
