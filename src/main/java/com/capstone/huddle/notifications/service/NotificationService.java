@@ -61,12 +61,24 @@ public class NotificationService {
             return;
         }
 
+        // Validate IDs exist
+        if (recipient.getId() == null || actor.getId() == null) {
+            log.warn("Cannot create notification: recipient or actor ID is null");
+            return;
+        }
+
         // Don't notify if actor and recipient are the same
         if (recipient.getId().equals(actor.getId())) {
             return;
         }
 
         try {
+            // Verify users exist in database before creating notification
+            if (!userRepository.existsById(recipient.getId()) || !userRepository.existsById(actor.getId())) {
+                log.warn("Cannot create notification: recipient or actor does not exist in database");
+                return;
+            }
+
             NotificationEntity notification = NotificationEntity.builder()
                     .recipient(recipient)
                     .actor(actor)
