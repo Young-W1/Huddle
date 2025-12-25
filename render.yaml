@@ -57,8 +57,9 @@ services:
         source: /*
         destination: /index.html
     envVars:
+      # IMPORTANT: Update this to your actual backend URL from Render dashboard
       - key: REACT_APP_API_URL
-        value: https://huddle-api.onrender.com
+        sync: false
       - key: NODE_VERSION
         value: 18
 
