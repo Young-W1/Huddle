@@ -139,26 +139,61 @@ public class ArticleService {
         // Delete all related data first to avoid foreign key constraints
         log.info("Deleting related data for article ID: {}", id);
 
-        // Delete notifications related to this article
-        notificationRepository.deleteByEntityId(id);
+        // Delete notifications related to this article (ignore errors - notifications may reference deleted users)
+        try {
+            notificationRepository.deleteByEntityId(id);
+        } catch (Exception e) {
+            log.warn("Could not delete notifications for article {}: {}", id, e.getMessage());
+        }
 
         // Delete reports related to this article
-        reportRepository.deleteByReportedArticle(article);
+        try {
+            reportRepository.deleteByReportedArticle(article);
+        } catch (Exception e) {
+            log.warn("Could not delete reports for article {}: {}", id, e.getMessage());
+        }
 
-        // Delete comment votes for all comments on this article (batch delete)
-        commentVoteRepository.deleteByArticleId(id);
+        // First, get all comments for this article and delete their votes individually
+        try {
+            List<CommentsEntity> comments = commentsRepository.findByArticleId(id);
+            for (CommentsEntity comment : comments) {
+                try {
+                    commentVoteRepository.deleteByComment(comment);
+                } catch (Exception e) {
+                    log.warn("Could not delete votes for comment {}: {}", comment.getId(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch/delete comment votes for article {}: {}", id, e.getMessage());
+        }
 
-        // Delete all comments on this article (batch delete)
-        commentsRepository.deleteByArticleId(id);
+        // Delete all comments on this article
+        try {
+            commentsRepository.deleteByArticleId(id);
+        } catch (Exception e) {
+            log.warn("Could not delete comments for article {}: {}", id, e.getMessage());
+        }
 
         // Delete article ratings
-        articleRatingRepository.deleteByArticle(article);
+        try {
+            articleRatingRepository.deleteByArticle(article);
+        } catch (Exception e) {
+            log.warn("Could not delete ratings for article {}: {}", id, e.getMessage());
+        }
 
         // Delete bookmarks
-        bookmarkRepository.deleteByArticle(article);
+        try {
+            bookmarkRepository.deleteByArticle(article);
+        } catch (Exception e) {
+            log.warn("Could not delete bookmarks for article {}: {}", id, e.getMessage());
+        }
 
         // Delete shares
-        articleShareRepository.deleteByArticle(article);
+        try {
+            articleShareRepository.deleteByArticle(article);
+        } catch (Exception e) {
+            log.warn("Could not delete shares for article {}: {}", id, e.getMessage());
+        }
 
         // Finally delete the article
         articleRepository.delete(article);
