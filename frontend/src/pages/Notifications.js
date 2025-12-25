@@ -19,7 +19,7 @@ import {
     MarkEmailRead,
     Circle
 } from '@mui/icons-material';
-import axios from 'axios';
+import { notificationService } from '../services/api';
 
 function Notifications() {
     const [notifications, setNotifications] = useState([]);
@@ -33,10 +33,7 @@ function Notifications() {
 
     const fetchNotifications = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:6061/huddle/notifications', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await notificationService.getNotifications();
             if (response.data.success) {
                 setNotifications(response.data.data.content || []);
             }
@@ -49,10 +46,7 @@ function Notifications() {
 
     const fetchUnreadCount = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:6061/huddle/notifications/unread-count', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await notificationService.getUnreadCount();
             if (response.data.success) {
                 setUnreadCount(response.data.data);
             }
@@ -63,10 +57,7 @@ function Notifications() {
 
     const markAsRead = async (notificationId) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post(`http://localhost:6061/huddle/notifications/mark-read/${notificationId}`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await notificationService.markAsRead(notificationId);
             fetchNotifications();
             fetchUnreadCount();
         } catch (err) {
@@ -76,9 +67,7 @@ function Notifications() {
 
     const markAllAsRead = async () => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post('http://localhost:6061/huddle/notifications/mark-all-read', {}, {
-                headers: { Authorization: `Bearer ${token}` }
+            await notificationService.markAllAsRead();
             });
             fetchNotifications();
             fetchUnreadCount();
